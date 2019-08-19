@@ -44,17 +44,44 @@ parser.add_argument('--top_p', type=float, default=0.0, help='P for top-p sampli
 parser.add_argument('--restore_from', type=str, default='latest', help='Either "latest", "fresh", or a path to a checkpoint file')
 parser.add_argument('--run_name', type=str, default='run1', help='Run id. Name of subdirectory in checkpoint/ and samples/')
 parser.add_argument('--sample_every', metavar='N', type=int, default=100, help='Generate samples every N steps')
-parser.add_argument('--sample_length', metavar='TOKENS', type=int, default=1023, help='Sample this many tokens')
+parser.add_argument('--sample_length', metavar='TOKENS', type=int, default=-1, help='Sample this many tokens')
 parser.add_argument('--sample_num', metavar='N', type=int, default=1, help='Generate this many samples')
 parser.add_argument('--save_every', metavar='N', type=int, default=1000, help='Write a checkpoint every N steps')
 
 parser.add_argument('--val_dataset', metavar='PATH', type=str, default=None, help='Dataset for validation loss, defaults to --dataset.')
-parser.add_argument('--val_batch_size', metavar='SIZE', type=int, default=2, help='Batch size for validation.')
-parser.add_argument('--val_batch_count', metavar='N', type=int, default=40, help='Number of batches for validation.')
+parser.add_argument('--val_batch_size', metavar='SIZE', type=int, default=1, help='Batch size for validation.')
+parser.add_argument('--val_batch_count', metavar='N', type=int, default=80, help='Number of batches for validation.')
 parser.add_argument('--val_every', metavar='STEPS', type=int, default=0, help='Calculate validation loss every STEPS steps.')
 
 parser.add_argument('--storage_bucket', metavar='BUCKET', type=str, default='gs://sgappa-multi/gpt-2/', help='Cloud storage bucket name (when using TPU)')
 parser.add_argument('--init_tpu', default=False, action='store_true', help='Initialize TPU session.')
+
+parser.add_argument('--fresh_model', default=False, action='store_true', help="Don't load model from disk; initialize model weights to random values")
+parser.add_argument('--save_on_ctrlc', default=False, action='store_true', help='When execution is interrupted, should we save the model to disk?')
+
+# 1.5B
+parser.add_argument('--n_ctx', type=int, default=1024, help='For a fresh model, how large should n_ctx be?')
+parser.add_argument('--n_embed', type=int, default=1600, help='For a fresh model, how large should n_embed be?')
+parser.add_argument('--n_head', type=int, default=24, help='For a fresh model, how large should n_head be?')
+parser.add_argument('--n_layer', type=int, default=48, help='For a fresh model, how large should n_layer be?')
+
+# 345M
+#parser.add_argument('--n_ctx', type=int, default=1024, help='For a fresh model, how large should n_ctx be?')
+#parser.add_argument('--n_embed', type=int, default=1024, help='For a fresh model, how large should n_embed be?')
+#parser.add_argument('--n_head', type=int, default=16, help='For a fresh model, how large should n_head be?')
+#parser.add_argument('--n_layer', type=int, default=24, help='For a fresh model, how large should n_layer be?')
+
+# 117M
+#parser.add_argument('--n_ctx', type=int, default=1024, help='For a fresh model, how large should n_ctx be?')
+#parser.add_argument('--n_embed', type=int, default=768, help='For a fresh model, how large should n_embed be?')
+#parser.add_argument('--n_head', type=int, default=12, help='For a fresh model, how large should n_head be?')
+#parser.add_argument('--n_layer', type=int, default=12, help='For a fresh model, how large should n_layer be?')
+
+# 117M_deep
+#parser.add_argument('--n_ctx', type=int, default=32*1024, help='For a fresh model, how large should n_ctx be?')
+#parser.add_argument('--n_embed', type=int, default=768, help='For a fresh model, how large should n_embed be?')
+#parser.add_argument('--n_head', type=int, default=12, help='For a fresh model, how large should n_head be?')
+#parser.add_argument('--n_layer', type=int, default=12, help='For a fresh model, how large should n_layer be?')
 
 def maketree(path):
     try:
@@ -79,7 +106,14 @@ def main(tpu_cluster=None):
     hparams = model.default_hparams()
     with open(os.path.join('models', args.model_name, 'hparams.json')) as f:
         hparams.override_from_dict(json.load(f))
+    if args.fresh_model:
+        hparams.n_ctx=args.n_ctx
+        hparams.n_embed=args.n_embed
+        hparams.n_head=args.n_head
+        hparams.n_layer=args.n_layer
 
+    if args.sample_length < 0:
+        args.sample_length = hparams.n_ctx - 1
     if args.sample_length > hparams.n_ctx:
         raise ValueError(
             "Can't get samples longer than window size: %s" % hparams.n_ctx)
@@ -184,8 +218,9 @@ def main(tpu_cluster=None):
             ckpt = tf.train.latest_checkpoint(args.restore_from)
         if ckpt:
             ckpt = os.path.join(BUCKET, ckpt)
-        print('Loading checkpoint', ckpt)
-        saver.restore(sess, ckpt)
+        if not args.fresh_model:
+            print('Loading checkpoint', ckpt)
+            saver.restore(sess, ckpt)
 
         print('Loading dataset...')
         chunks = load_dataset(enc, args.dataset, args.combine)
@@ -199,7 +234,7 @@ def main(tpu_cluster=None):
             # Sample from validation set once with fixed seed to make
             # it deterministic during training as well as across runs.
             val_data_sampler = Sampler(val_chunks, seed=1)
-            val_batches = [[val_data_sampler.sample(1024) for _ in range(args.val_batch_size)]
+            val_batches = [[val_data_sampler.sample(hparams.n_ctx) for _ in range(args.val_batch_size)]
                            for _ in range(args.val_batch_count)]
 
         counter = 1
@@ -270,13 +305,13 @@ def main(tpu_cluster=None):
             print('[{counter} | {time:2.4f}] {msg}'.format(counter=counter, time=elapsed(), msg=msg))
 
         def sample_batch():
-            #return [data_sampler.sample(1024) for _ in range(args.batch_size)]
+            #return [data_sampler.sample(hparams.n_ctx) for _ in range(args.batch_size)]
             #say('Sampling batch...')
             r = []
             times = []
             for _ in range(args.batch_size):
                 start = time.time()
-                sample = data_sampler.sample(1024)
+                sample = data_sampler.sample(hparams.n_ctx)
                 end = time.time()
                 elapsed = (end - start)
                 r += [sample]
@@ -335,7 +370,8 @@ def main(tpu_cluster=None):
                 counter += 1
         except KeyboardInterrupt:
             print('interrupted')
-            #save()
+            if args.save_on_ctrlc:
+                save()
         if tpu_cluster and args.init_tpu:
             print('Shutting down TPU system...')
             sess.run(tpu.shutdown_system())

@@ -10,6 +10,8 @@ import tensorflow as tf
 import time
 import tqdm
 from tensorflow.core.protobuf import rewriter_config_pb2
+from tensorflow.contrib import tpu
+from tensorflow.contrib.cluster_resolver import TPUClusterResolver
 
 import model, sample, encoder
 from load_dataset import load_dataset, Sampler
@@ -51,6 +53,8 @@ parser.add_argument('--val_batch_size', metavar='SIZE', type=int, default=2, hel
 parser.add_argument('--val_batch_count', metavar='N', type=int, default=40, help='Number of batches for validation.')
 parser.add_argument('--val_every', metavar='STEPS', type=int, default=0, help='Calculate validation loss every STEPS steps.')
 
+parser.add_argument('--storage_bucket', metavar='BUCKET', type=str, default='gs://sgappa-multi/gpt-2/', help='Cloud storage bucket name (when using TPU)')
+parser.add_argument('--init_tpu', default=False, action='store_true', help='Initialize TPU session.')
 
 def maketree(path):
     try:
@@ -68,8 +72,9 @@ def randomize(context, hparams, p):
         return context
 
 
-def main():
+def main(tpu_cluster=None):
     args = parser.parse_args()
+    BUCKET = args.storage_bucket if tpu_cluster else ''
     enc = encoder.get_encoder(args.model_name)
     hparams = model.default_hparams()
     with open(os.path.join('models', args.model_name, 'hparams.json')) as f:
@@ -87,7 +92,12 @@ def main():
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
     config.graph_options.rewrite_options.layout_optimizer = rewriter_config_pb2.RewriterConfig.OFF
-    with tf.Session(config=config) as sess:
+    with tf.Session(tpu_cluster, config=config) as sess:
+        if tpu_cluster and args.init_tpu:
+            print("initializing TPU system...")
+            sess.run(tpu.initialize_system())
+        if tpu_cluster:
+            print("Using TPU %s" % tpu_cluster)
         context = tf.placeholder(tf.int32, [args.batch_size, None])
         context_in = randomize(context, hparams, args.noise)
         output = model.model(hparams=hparams, X=context_in)
@@ -122,6 +132,12 @@ def main():
             opt = tf.train.GradientDescentOptimizer(learning_rate=args.learning_rate)
         else:
             exit('Bad optimizer:', args.optimizer)
+        
+        if tpu_cluster:
+            # https://pulsejet.github.io/blog/posts/tpu-without-estimator/
+            from tensorflow.contrib.tpu.python.tpu import tpu_function
+            #tpu_function.get_tpu_context().set_number_of_shards(8)
+            #opt = tf.contrib.tpu.CrossShardOptimizer(opt)
 
         if args.accumulate_gradients > 1:
             if args.memory_saving_gradients:
@@ -166,6 +182,8 @@ def main():
                 os.path.join('models', args.model_name))
         else:
             ckpt = tf.train.latest_checkpoint(args.restore_from)
+        if ckpt:
+            ckpt = os.path.join(BUCKET, ckpt)
         print('Loading checkpoint', ckpt)
         saver.restore(sess, ckpt)
 
@@ -196,11 +214,11 @@ def main():
             maketree(os.path.join(CHECKPOINT_DIR, args.run_name))
             print(
                 'Saving',
-                os.path.join(CHECKPOINT_DIR, args.run_name,
+                os.path.join(BUCKET, CHECKPOINT_DIR, args.run_name,
                              'model-{}').format(counter))
             saver.save(
                 sess,
-                os.path.join(CHECKPOINT_DIR, args.run_name, 'model'),
+                os.path.join(BUCKET, CHECKPOINT_DIR, args.run_name, 'model'),
                 global_step=counter)
             with open(counter_path, 'w') as fp:
                 fp.write(str(counter) + '\n')
@@ -218,9 +236,9 @@ def main():
                     text = enc.decode(out[i])
                     text = '======== SAMPLE {} ========\n{}\n'.format(
                         index + 1, text)
+                    print(text)
                     all_text.append(text)
                     index += 1
-            print(text)
             maketree(os.path.join(SAMPLE_DIR, args.run_name))
             with open(
                     os.path.join(SAMPLE_DIR, args.run_name,
@@ -237,18 +255,39 @@ def main():
             summary_log.add_summary(v_summary, counter)
             summary_log.flush()
             print(
-                '[{counter} | {time:2.2f}] validation loss = {loss:2.2f}'
+                '[{counter} | {time:2.4f}] validation loss = {loss:2.4f}'
                 .format(
                     counter=counter,
                     time=time.time() - start_time,
                     loss=v_val_loss))
 
-        def sample_batch():
-            return [data_sampler.sample(1024) for _ in range(args.batch_size)]
-
-
-        avg_loss = (0.0, 0.0)
         start_time = time.time()
+        
+        def elapsed():
+            return time.time() - start_time
+
+        def say(msg):
+            print('[{counter} | {time:2.4f}] {msg}'.format(counter=counter, time=elapsed(), msg=msg))
+
+        def sample_batch():
+            #return [data_sampler.sample(1024) for _ in range(args.batch_size)]
+            #say('Sampling batch...')
+            r = []
+            times = []
+            for _ in range(args.batch_size):
+                start = time.time()
+                sample = data_sampler.sample(1024)
+                end = time.time()
+                elapsed = (end - start)
+                r += [sample]
+                times += [elapsed]
+            total = sum(times)
+            avg = total / len(times)
+            #say('Sampled %d batches in %.4f seconds (avg per batch: %.4f)' % (args.batch_size, total, avg))
+            return r
+
+        prev_time = time.time()
+        avg_loss = (0.0, 0.0)
 
         try:
             while True:
@@ -260,34 +299,56 @@ def main():
                     validation()
 
                 if args.accumulate_gradients > 1:
+                    #say('Running opt_reset...')
                     sess.run(opt_reset)
                     for _ in range(args.accumulate_gradients):
-                        sess.run(
-                            opt_compute, feed_dict={context: sample_batch()})
+                        batch = sample_batch()
+                        say('Running opt_compute...')
+                        sess.run(opt_compute, feed_dict={context: batch})
+                    say('Running opt_apply...')
                     (v_loss, v_summary) = sess.run((opt_apply, summaries))
                 else:
+                    batch = sample_batch()
+                    say('Running opt_apply...')
                     (_, v_loss, v_summary) = sess.run(
                         (opt_apply, loss, summaries),
-                        feed_dict={context: sample_batch()})
+                        feed_dict={context: batch})
 
+                say('Adding summary...')
                 summary_log.add_summary(v_summary, counter)
 
                 avg_loss = (avg_loss[0] * 0.99 + v_loss,
                             avg_loss[1] * 0.99 + 1.0)
 
+                now = time.time()
                 print(
-                    '[{counter} | {time:2.2f}] loss={loss:2.2f} avg={avg:2.2f}'
+                        '[{counter} | {time:2.4f} | {delta:2.2f} | {ops:2.6f}/s] loss={loss:2.4f} avg={avg:2.4f}'
                     .format(
                         counter=counter,
-                        time=time.time() - start_time,
+                        time=now - start_time,
+                        delta=now - prev_time,
+                        ops=args.batch_size / (now - prev_time),
                         loss=v_loss,
                         avg=avg_loss[0] / avg_loss[1]))
+                prev_time = now
 
                 counter += 1
         except KeyboardInterrupt:
             print('interrupted')
-            save()
+            #save()
+        if tpu_cluster and args.init_tpu:
+            print('Shutting down TPU system...')
+            sess.run(tpu.shutdown_system())
 
+def main_tpu():
+    # Get the TPU's location
+    tpu_cluster = TPUClusterResolver().get_master()
+    print(tpu_cluster)
+    #with tf.Session(tpu_cluster) as sess:
+    #    sess.run(tpu.initialize_system())
+    #    main()
+    #    sess.run(tpu.shutdown_system())
+    main(tpu_cluster=tpu_cluster)
 
 if __name__ == '__main__':
-    main()
+    main_tpu()

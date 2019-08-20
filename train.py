@@ -60,28 +60,22 @@ parser.add_argument('--fresh_model', default=False, action='store_true', help="D
 parser.add_argument('--save_on_ctrlc', default=False, action='store_true', help='When execution is interrupted, should we save the model to disk?')
 
 # 1.5B
-parser.add_argument('--n_ctx', type=int, default=1024, help='For a fresh model, how large should n_ctx be?')
-parser.add_argument('--n_embed', type=int, default=1600, help='For a fresh model, how large should n_embed be?')
-parser.add_argument('--n_head', type=int, default=24, help='For a fresh model, how large should n_head be?')
-parser.add_argument('--n_layer', type=int, default=48, help='For a fresh model, how large should n_layer be?')
+#parser.add_argument('--n_ctx', type=int, default=1024, help='For a fresh model, how large should n_ctx be?')
+#parser.add_argument('--n_embd', type=int, default=1600, help='For a fresh model, how large should n_embd be?')
+#parser.add_argument('--n_head', type=int, default=25, help='For a fresh model, how large should n_head be?')
+#parser.add_argument('--n_layer', type=int, default=48, help='For a fresh model, how large should n_layer be?')
 
 # 345M
 #parser.add_argument('--n_ctx', type=int, default=1024, help='For a fresh model, how large should n_ctx be?')
-#parser.add_argument('--n_embed', type=int, default=1024, help='For a fresh model, how large should n_embed be?')
+#parser.add_argument('--n_embd', type=int, default=1024, help='For a fresh model, how large should n_embd be?')
 #parser.add_argument('--n_head', type=int, default=16, help='For a fresh model, how large should n_head be?')
 #parser.add_argument('--n_layer', type=int, default=24, help='For a fresh model, how large should n_layer be?')
 
 # 117M
-#parser.add_argument('--n_ctx', type=int, default=1024, help='For a fresh model, how large should n_ctx be?')
-#parser.add_argument('--n_embed', type=int, default=768, help='For a fresh model, how large should n_embed be?')
-#parser.add_argument('--n_head', type=int, default=12, help='For a fresh model, how large should n_head be?')
-#parser.add_argument('--n_layer', type=int, default=12, help='For a fresh model, how large should n_layer be?')
-
-# 117M_deep
-#parser.add_argument('--n_ctx', type=int, default=32*1024, help='For a fresh model, how large should n_ctx be?')
-#parser.add_argument('--n_embed', type=int, default=768, help='For a fresh model, how large should n_embed be?')
-#parser.add_argument('--n_head', type=int, default=12, help='For a fresh model, how large should n_head be?')
-#parser.add_argument('--n_layer', type=int, default=12, help='For a fresh model, how large should n_layer be?')
+parser.add_argument('--n_ctx', type=int, default=1024, help='For a fresh model, how large should n_ctx be?')
+parser.add_argument('--n_embd', type=int, default=768, help='For a fresh model, how large should n_embd be?')
+parser.add_argument('--n_head', type=int, default=12, help='For a fresh model, how large should n_head be?')
+parser.add_argument('--n_layer', type=int, default=12, help='For a fresh model, how large should n_layer be?')
 
 def maketree(path):
     try:
@@ -108,7 +102,7 @@ def main(tpu_cluster=None):
         hparams.override_from_dict(json.load(f))
     if args.fresh_model:
         hparams.n_ctx=args.n_ctx
-        hparams.n_embed=args.n_embed
+        hparams.n_embd=args.n_embd
         hparams.n_head=args.n_head
         hparams.n_layer=args.n_layer
 

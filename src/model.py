@@ -2,13 +2,14 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.training import HParams
 
-def default_hparams():
+def default_hparams(n_ctx=1024, n_embd=768, n_head=12, n_layer=12, n_vocab=50257, n_conv=3):
     return HParams(
-        n_vocab=0,
-        n_ctx=1024,
-        n_embd=768,
-        n_head=12,
-        n_layer=12,
+        n_vocab=n_vocab,
+        n_ctx=n_ctx,
+        n_embd=n_embd,
+        n_head=n_head,
+        n_layer=n_layer,
+        n_conv=n_conv,
     )
 
 def shape_list(x):
@@ -99,7 +100,7 @@ def attn(x, scope, n_state, *, past, hparams):
         return a
 
     with tf.variable_scope(scope):
-        c = conv1d(x, 'c_attn', n_state*3)
+        c = conv1d(x, 'c_attn', n_state*hparams.n_conv)
         q, k, v = map(split_heads, tf.split(c, 3, axis=2))
         present = tf.stack([k, v], axis=1)
         if past is not None:

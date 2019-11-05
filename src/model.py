@@ -20,7 +20,7 @@ def default_hparams():
         n_head=12,
         n_layer=12,
         tpu_address=get_tpu_addr(),
-        shards=8
+        shards=1
     )
 
 def shape_list(x):

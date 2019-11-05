@@ -143,9 +143,9 @@ def block(x, scope, *, past, hparams):
             return mlp(tf.transpose(input), 'mlp', nx*4, hparams=hparams)
         if hparams.tpu_address is not None:
             m = tf.contrib.tpu.batch_parallel(op, [tf.transpose(ln_2)], num_shards=hparams.shards)
+            m = tf.concat(m, 0)
         else:
             m = op(tf.transpose(ln_2))
-        m = m.reshape([1, 0, -1])
         x = x + m
         return x, present
 

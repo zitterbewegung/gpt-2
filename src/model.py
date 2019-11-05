@@ -255,7 +255,7 @@ def model(hparams, X, past=None, scope='model', reuse=tf.AUTO_REUSE, align=False
                 #print('op_shape', [batch * sequence // hparams.shards, hparams.n_embd], batch, sequence, hparams.shards, hparams.n_embd)
                 print('op', h_flat, wte, result)
             return result
-        if hparams.tpu_address is not None:
+        if hparams.tpu_address is not None and align:
             input_shard_axis_0 = 1 if not 'GPT2_INPUT_SHARD_AXIS_0' in os.environ else int(os.environ['GPT2_INPUT_SHARD_AXIS_0'])
             input_shard_axis_1 = 1 if not 'GPT2_INPUT_SHARD_AXIS_1' in os.environ else int(os.environ['GPT2_INPUT_SHARD_AXIS_1'])
             output_shard_axis_0 = 0 if not 'GPT2_OUTPUT_SHARD_AXIS_0' in os.environ else int(os.environ['GPT2_OUTPUT_SHARD_AXIS_0'])

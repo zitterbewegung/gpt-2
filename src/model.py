@@ -138,6 +138,23 @@ def mlp(x, scope, n_state, *, hparams):
         return h2
 
 
+# http://stackoverflow.com/questions/1624883/alternative-way-to-split-a-list-into-groups-of-n
+import itertools
+def group(n, iterable, fillvalue=None):
+    "group(3, 'ABCDEFG', 'x') --> ABC DEF Gxx"
+    args = [iter(iterable)] * n
+    return itertools.zip_longest(*args, fillvalue=fillvalue)
+
+_tpus = None
+def get_tpus(hparams):
+    global _tpus
+    if _tpus is None and harapms.tpu_address is not None:
+        with tf.Session(hparams.tpu_address) as sess:
+            devices = sess.list_devices()
+            tpus = devices[-1 - 8:-1]
+        _tpus = list(group(hparams.shards, tpus))
+    return _tpus
+
 def block(x, scope, *, past, hparams):
     with tf.variable_scope(scope):
         nx = x.shape[-1].value
@@ -148,7 +165,7 @@ def block(x, scope, *, past, hparams):
         def op(input):
             return mlp(tf.transpose(input), 'mlp', nx*4, hparams=hparams)
         if hparams.tpu_address is not None:
-            m = tf.contrib.tpu.batch_parallel(op, [tf.transpose(ln_2)], num_shards=hparams.shards)
+            m = tf.contrib.tpu.batch_parallel(op, [tf.transpose(ln_2)], num_shards=hparams.shards, device_assignment=get_tpus(hparams))
             #m = tf.concat(m, 0)
         else:
             m = op(tf.transpose(ln_2))

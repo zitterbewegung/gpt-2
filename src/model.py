@@ -169,11 +169,11 @@ def mlp(x, scope, n_state, *, hparams):
             w = conv1d_w(nf, nh)
             b = conv1d_b(nf)
         def op(w, b):
-            #shape = shape_list(h)
-            #*start, nx = shape
-            result = conv1d_op(h, w, b, nh, shape)
+            shape = shape_list(w)
+            *start, nw = shape
+            result = conv1d_op(h, w, b, nw, shape)
             if 'GPT2_DEBUG' in os.environ:
-                print('mlp_h2', h, w, b, result, nh, shape)
+                print('mlp_h2', h, w, b, result, nw, shape)
             return result
         if hparams.tpu_address is not None and hparams.shards > 0:
             input_shard_axis_0 = 0 if not 'GPT2_MLP_INPUT_SHARD_AXIS_0' in os.environ else int(os.environ['GPT2_MLP_INPUT_SHARD_AXIS_0'])

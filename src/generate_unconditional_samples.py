@@ -18,7 +18,8 @@ def sample_model(
     temperature=1,
     top_k=0,
     top_p=0.0,
-    init_tpu=False
+    init_tpu=False,
+    storage_bucket='gs://sgappa-multi/gpt-2/'
 ):
     """
     Run the sample_model
@@ -55,6 +56,9 @@ def sample_model(
     with tf.Session(hparams.tpu_address, graph=tf.Graph()) as sess:
         if tpu_address:
             print("Using TPU %s" % tpu_address)
+            BUCKET = storage_bucket
+        else:
+            BUCKET = ''
         if tpu_address and init_tpu:
             print("initializing TPU system...")
             sess.run(tpu.initialize_system())
@@ -69,7 +73,7 @@ def sample_model(
         )[:, 1:]
 
         saver = tf.train.Saver()
-        ckpt = tf.train.latest_checkpoint(os.path.join('models', model_name))
+        ckpt = tf.train.latest_checkpoint(os.path.join(BUCKET, 'models', model_name))
         saver.restore(sess, ckpt)
 
         generated = 0

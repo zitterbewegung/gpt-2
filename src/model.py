@@ -159,7 +159,15 @@ def conv1d_op(x, w, b, nf, shape=None, **kws):
 def mlp(x, scope, n_state, *, hparams):
     with tf.variable_scope(scope):
         nx = x.shape[-1].value
-        h = gelu(conv1d(x, 'c_fc', n_state))
+        h0 = conv1d(x, 'c_fc', n_state)
+        h1 = gelu(h0)
+        h2 = conv1d(h1, 'c_proj', nx)
+        if 'GPT2_DEBUG' in os.environ:
+            print('mlp_h2', n_state, nx, x, h0, h1, h2)
+        return h2
+
+def mlp1(x, scope, n_state, *, hparams):
+    with tf.variable_scope(scope):
         nf = nx
         with tf.variable_scope('c_proj'):
             shape = shape_list(h)

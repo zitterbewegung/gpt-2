@@ -246,6 +246,7 @@ def model(hparams, X, past=None, scope='model', reuse=tf.AUTO_REUSE):
             result = tf.matmul(h_flat, wte, transpose_b=True)
             if 'GPT2_DEBUG' in os.environ:
                 print('op', h_flat, wte, result)
+            return result
         if hparams.tpu_address is not None:
             input_shard_axis_0 = 1 if not 'GPT2_INPUT_SHARD_AXIS_0' in os.environ else int(os.environ['GPT2_INPUT_SHARD_AXIS_0'])
             input_shard_axis_1 = 1 if not 'GPT2_INPUT_SHARD_AXIS_1' in os.environ else int(os.environ['GPT2_INPUT_SHARD_AXIS_1'])

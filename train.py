@@ -17,6 +17,8 @@ import model, sample, encoder
 from load_dataset import load_dataset, Sampler
 from accumulate import AccumulatingOptimizer
 import memory_saving_gradients
+from glob import glob
+import re
 
 CHECKPOINT_DIR = 'checkpoint'
 SAMPLE_DIR = 'samples'
@@ -242,7 +244,41 @@ def main(tpu_cluster=None):
             with open(counter_path, 'r') as fp:
                 counter = int(fp.read()) + 1
 
+        def load_tpu(ctr=None, base=None, session=None):
+            if base is None:
+                base = os.path.join(CHECKPOINT_DIR, args.run_name)
+            if ctr is None:
+                ctrs = np.array([[int(y) for y in re.findall(r'model-([0-9]+)[.]npy', x)] for x in glob(os.path.join(base, 'model-*.npy'))]).flatten()
+                if len(ctrs) <= 0:
+                    return counter
+                ctr = ctrs.max()
+            out = os.path.join(base, 'model-{}.npy').format(ctr)
+            print('Loading', out)
+            vals = dict(np.load(out, allow_pickle=True))
+            vs = tf.trainable_variables()
+            for x in vs:
+                value = vals[x.name]
+                x.load(value, session)
+            print('Setting counter %d (was %d)' % (ctr + 1, counter))
+            return ctr + 1
+
+        if not args.fresh_model:
+            if tpu_cluster:
+                counter = load_tpu(session=sess)
+
+        def save_tpu():
+            maketree(os.path.join(CHECKPOINT_DIR, args.run_name))
+            out = os.path.join(CHECKPOINT_DIR, args.run_name, 'model-{}.npy').format(counter)
+            print('Saving', out)
+            vals = [(x.name, x.eval()) for x in tf.trainable_variables()]
+            np.save(out, vals)
+            print('Updating counter')
+            with open(counter_path, 'w') as fp:
+                fp.write(str(counter) + '\n')
+
         def save():
+            if tpu_cluster:
+                return save_tpu()
             maketree(os.path.join(CHECKPOINT_DIR, args.run_name))
             print(
                 'Saving',

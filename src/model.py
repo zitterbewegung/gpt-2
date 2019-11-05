@@ -145,6 +145,7 @@ def block(x, scope, *, past, hparams):
             m = tf.contrib.tpu.batch_parallel(op, [tf.transpose(ln_2)], num_shards=hparams.shards)
         else:
             m = op(tf.transpose(ln_2))
+        m = m.reshape([1, 0, -1])
         x = x + m
         return x, present
 

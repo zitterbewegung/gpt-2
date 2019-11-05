@@ -242,7 +242,7 @@ def model(hparams, X, past=None, scope='model', reuse=tf.AUTO_REUSE):
 
         # Language model loss.  Do tokens <n predict token n?
         def op(h, wte):
-            h_flat = tf.reshape(h, [batch * sequence // hparams.shards, hparams.n_embd])
+            h_flat = tf.reshape(h, [batch * sequence, hparams.n_embd // hparams.shards])
             result = tf.matmul(h_flat, wte, transpose_b=True)
             if 'GPT2_DEBUG' in os.environ:
                 print('op_shape', [batch * sequence // hparams.shards, hparams.n_embd], batch, sequence, hparams.shards, hparams.n_embd)

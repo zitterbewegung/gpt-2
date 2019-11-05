@@ -80,15 +80,6 @@ def conv1d_w(nf, nx, *, w_init_stdev=0.02):
 def conv1d_b(nf, *, b_init=0):
     return tf.get_variable('b', [nf], initializer=tf.constant_initializer(b_init))
 
-def conv1d_op(x, w, b, nf, shape=None):
-    if shape is None:
-        shape = shape_list(x)
-    *start, nx = shape or shape_list(x)
-    X = tf.reshape(x, [-1, nx])
-    W = tf.reshape(w, [-1, nf])
-    Y = tf.matmul(X, W) + b
-    return tf.reshape(Y, start+[nf])
-
 def attention_mask(nd, ns, *, dtype):
     """1's in the lower triangle, counting from the lower right corner.
 
@@ -154,6 +145,15 @@ def conv1d(x, scope, nf, *, w_init_stdev=0.02, b_init=0):
         c = conv1d_op(x, w, b, nf, shape=shape)
         return c
 
+def conv1d_op(x, w, b, nf, shape=None, **kws):
+    if shape is None:
+        shape = shape_list(x)
+    *start, nx = shape or shape_list(x)
+    X = tf.reshape(x, [nx, -1])
+    W = tf.reshape(w, [-1, nf])
+    Y = tf.matmul(X, W, **kws) + b
+    return tf.reshape(Y, start+[nf])
+
 def mlp(x, scope, n_state, *, hparams):
     with tf.variable_scope(scope):
         nx = x.shape[-1].value
@@ -167,7 +167,7 @@ def mlp(x, scope, n_state, *, hparams):
         def op(h, w, b):
             shape = shape_list(h)
             *start, nx = shape
-            result = conv1d_op(h, w, b, nx)
+            result = conv1d_op(h, w, b, nx, shape)
             if 'GPT2_DEBUG' in os.environ:
                 print('mlp_h2', h, w, b, result, nx, shape)
             return result

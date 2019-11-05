@@ -181,7 +181,7 @@ def mlp(x, scope, n_state, *, hparams):
         #h0 = conv1d(x, 'c_fc', n_state)
         h0 = conv1d_op(x, fc_w, fc_b, n_state, nx)
         h1 = gelu(h0)
-        h2 = conv1d(h1, 'c_proj', nx)
+        h2 = conv1d_op(h1, pr_w, pr_b, nx, n_state)
         if 'GPT2_DEBUG' in os.environ:
             print('mlp_h2', n_state, nx, x, h0, h1, h2)
         return h2

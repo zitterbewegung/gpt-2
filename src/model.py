@@ -147,10 +147,11 @@ def conv1d_b(nf, *, b_init=0):
     return tf.get_variable('b', [nf], initializer=tf.constant_initializer(b_init))
 
 def conv1d_op(x, w, b, nf, nx=None, shape=None, **kws):
+    if shape is None:
+        shape = shape_list(x)
     if nx is None:
-        if shape is None:
-            shape = shape_list(x)
-        *start, nx = shape or shape_list(x)
+        nx = shape[-1]
+    start = shape[0:-1]
     if 'GPT2_DEBUG' in os.environ:
         print('conv1d_op', nx, nf, x, w, b)
     X = tf.reshape(x, [-1, nx])

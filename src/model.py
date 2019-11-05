@@ -150,7 +150,20 @@ def mlp(x, scope, n_state, *, hparams):
     with tf.variable_scope(scope):
         nx = x.shape[-1].value
         h = gelu(conv1d(x, 'c_fc', n_state))
-        h2 = conv1d(h, 'c_proj', nx)
+        def op(h):
+            result = conv1d(h, 'c_proj', nx)
+            if 'GPT2_DEBUG' in os.environ:
+                print('mlp_h2', h, result)
+            return result
+        if hparams.tpu_address is not None and hparams.shards > 0:
+            input_shard_axis_0 = 0 if not 'GPT2_MLP_INPUT_SHARD_AXIS_0' in os.environ else int(os.environ['GPT2_MLP_INPUT_SHARD_AXIS_0'])
+            output_shard_axis_0 = 0 if not 'GPT2_MLP_OUTPUT_SHARD_AXIS_0' in os.environ else int(os.environ['GPT2_MLP_OUTPUT_SHARD_AXIS_0'])
+            output_reduce_axis = -1 if not 'GPT2_MLP_OUTPUT_REDUCE_AXIS' in os.environ else int(os.environ['GPT2_MLP_OUTPUT_REDUCE_AXIS'])
+            h2 = tf.contrib.tpu.shard(op, [h], input_shard_axes=[input_shard_axis_0], output_shard_axes=[output_shard_axis_0], num_shards=hparams.shards, device_assignment=get_tpus(hparams))
+            if output_reduce_axis >= 0:
+                h2 = tf.reduce_sum(h2, axis=output_reduce_axis, keepdims=True)
+        else:
+            h2 = conv1d(h, 'c_proj', nx)
         return h2
 
 
@@ -190,7 +203,7 @@ def block(x, scope, *, past, hparams):
                 if 'GPT2_DEBUG' in os.environ:
                     print('shards', shards, x.shape, input.shape, nx, n_state)
                 return mlp(input, 'mlp', n_state, hparams=hparams)
-            if hparams.tpu_address is not None:
+            if hparams.tpu_address is not None and hparams.shards > 0:
                 m = tf.contrib.tpu.shard(op, [ln_2], input_shard_axes=[2], output_shard_axes=[2], num_shards=hparams.shards, device_assignment=get_tpus(hparams))
             else:
                 m = op(ln_2)
@@ -255,7 +268,7 @@ def model(hparams, X, past=None, scope='model', reuse=tf.AUTO_REUSE, align=False
                 #print('op_shape', [batch * sequence // hparams.shards, hparams.n_embd], batch, sequence, hparams.shards, hparams.n_embd)
                 print('op', h_flat, wte, result)
             return result
-        if hparams.tpu_address is not None and align:
+        if hparams.tpu_address is not None and hparams.shards > 0 and align:
             input_shard_axis_0 = 0 if not 'GPT2_INPUT_SHARD_AXIS_0' in os.environ else int(os.environ['GPT2_INPUT_SHARD_AXIS_0'])
             input_shard_axis_1 = 1 if not 'GPT2_INPUT_SHARD_AXIS_1' in os.environ else int(os.environ['GPT2_INPUT_SHARD_AXIS_1'])
             output_shard_axis_0 = 0 if not 'GPT2_OUTPUT_SHARD_AXIS_0' in os.environ else int(os.environ['GPT2_OUTPUT_SHARD_AXIS_0'])

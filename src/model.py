@@ -198,10 +198,10 @@ def mlp(x, scope, n_state, *, hparams):
         if hparams.tpu_address is not None and hparams.shards > 0:
             sharding = True
             ny = n_state // max(1, hparams.shards)
-            h2 = tf.contrib.tpu.shard(op, [fc_w, fc_b, pr_w], input_shard_axes=[-1, -1, 1], output_shard_axes=[2], num_shards=hparams.shards, device_assignment=get_tpus(hparams))
+            h2 = tf.contrib.tpu.shard(op, [fc_w, fc_b, pr_w], input_shard_axes=[-1, -1], output_shard_axes=[2], num_shards=hparams.shards, device_assignment=get_tpus(hparams))
             if 'GPT2_DEBUG' in os.environ:
                 print('mlp_after', ny, nx, h2, fc_w, fc_b, x)
-            h2 = h2[0]
+            #h2 = h2[0]
             if 'GPT2_DEBUG' in os.environ:
                 print('mlp_after2', ny, nx, h2, pr_w, pr_b, x)
         else:

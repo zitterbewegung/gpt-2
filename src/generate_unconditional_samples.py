@@ -72,6 +72,10 @@ def sample_model(
             temperature=temperature, top_k=top_k, top_p=top_p
         )[:, 1:]
 
+        saver = tf.train.Saver()
+        ckpt = tf.train.latest_checkpoint(os.path.join(BUCKET, 'models', model_name))
+        saver.restore(sess, ckpt)
+
         output_tpu = sample.sample_sequence(
             hparams=hparams, length=length,
             start_token=enc.encoder['<|endoftext|>'],
@@ -80,11 +84,7 @@ def sample_model(
             scope='model', align=True
         )[:, 1:]
 
-        sess.run(tf.global_variables_initializer())
-
-        saver = tf.train.Saver()
-        ckpt = tf.train.latest_checkpoint(os.path.join(BUCKET, 'models', model_name))
-        saver.restore(sess, ckpt)
+        #sess.run(tf.global_variables_initializer())
 
         import pdb
         pdb.set_trace()

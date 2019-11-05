@@ -140,11 +140,11 @@ def block(x, scope, *, past, hparams):
         x = x + a
         ln_2 = norm(x, 'ln_2')
         def op(input):
-            return mlp(input, 'mlp', nx*4, hparams=hparams)
+            return mlp(tf.transpose(input), 'mlp', nx*4, hparams=hparams)
         if hparams.tpu_address is not None:
-            m = tf.contrib.tpu.batch_parallel(op, [ln_2], num_shards=hparams.shards)
+            m = tf.contrib.tpu.batch_parallel(op, [tf.transpose(ln_2)], num_shards=hparams.shards)
         else:
-            m = op(ln_2)
+            m = op(tf.transpose(ln_2))
         x = x + m
         return x, present
 

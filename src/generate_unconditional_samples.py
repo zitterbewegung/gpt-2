@@ -84,10 +84,12 @@ def sample_model(
             scope='model', align=True
         )[:, 1:]
 
-        #sess.run(tf.global_variables_initializer())
-
-        import pdb
-        pdb.set_trace()
+        vs = tf.trainable_variables()
+        wte = vs[1]
+        wte_aligned = vs[-1]
+        wte_v = wte.eval().copy()
+        wte_v.resize(model.shape_list(wte_aligned))
+        wte_aligned.load(wte_v)
 
         generated = 0
         while nsamples == 0 or generated < nsamples:
@@ -97,8 +99,6 @@ def sample_model(
                 text = enc.decode(out[i])
                 print("=" * 40 + " SAMPLE " + str(generated) + " " + "=" * 40)
                 print(text)
-            import pdb
-            pdb.set_trace()
 
 if __name__ == '__main__':
     fire.Fire(sample_model)

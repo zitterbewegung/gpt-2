@@ -146,7 +146,7 @@ def block(x, scope, *, past, hparams):
             m = tf.concat(m, 0)
         else:
             m = op(tf.transpose(ln_2))
-        m = m.reshape(x.shape)
+        m = tf.reshape(m, x.shape)
         x = x + m
         return x, present
 

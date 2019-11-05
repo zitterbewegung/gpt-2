@@ -184,7 +184,7 @@ def mlp(x, scope, n_state, *, hparams):
                 print('mlp_h2_pre', n_state, ny, nx, x, fc_w, fc_b, pr_w, pr_b)
             h0 = conv1d_op(x, fc_w, fc_b, ny, nx)
             if 'GPT2_DEBUG' in os.environ:
-                print('mlp_h2', n_state, nx, x, h0)
+                print('mlp_h2', ny, nx, x, h0)
             return h0
         if hparams.tpu_address is not None and hparams.shards > 0:
             ny = n_state // max(1, hparams.shards)
@@ -193,7 +193,7 @@ def mlp(x, scope, n_state, *, hparams):
             ny = n_state
             h0 = op(fc_w, fc_b)
         if 'GPT2_DEBUG' in os.environ:
-            print('mlp_after', n_state // max(1, hparams.shards), nx, h0, fc_w, fc_b, x)
+            print('mlp_after', ny, nx, h0, fc_w, fc_b, x)
         h1 = gelu(h0)
         h2 = conv1d_op(h1, pr_w, pr_b, nx, n_state)
         return h2

@@ -55,7 +55,7 @@ def sample_model(
     with tf.Session(hparams.tpu_address, graph=tf.Graph()) as sess:
         if tpu_address:
             print("Using TPU %s" % tpu_address)
-        if tpu_address and args.init_tpu:
+        if tpu_address and init_tpu:
             print("initializing TPU system...")
             sess.run(tpu.initialize_system())
         np.random.seed(seed)

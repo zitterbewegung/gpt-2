@@ -258,7 +258,7 @@ def model(hparams, X, past=None, scope='model', reuse=tf.AUTO_REUSE, align=False
 
         wpe = tf.get_variable('wpe', [hparams.n_ctx, hparams.n_embd],
                               initializer=tf.random_normal_initializer(stddev=0.01))
-        if align:
+        if align and hparams.shards > 0:
             # k = 128
             k = hparams.n_embd // (hparams.n_layer // 2)
             n = hparams.shards * k

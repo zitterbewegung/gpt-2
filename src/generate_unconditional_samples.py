@@ -72,21 +72,33 @@ def sample_model(
             temperature=temperature, top_k=top_k, top_p=top_p
         )[:, 1:]
 
-        import pdb
-        pdb.set_trace()
+        output_tpu = sample.sample_sequence(
+            hparams=hparams, length=length,
+            start_token=enc.encoder['<|endoftext|>'],
+            batch_size=batch_size,
+            temperature=temperature, top_k=top_k, top_p=top_p,
+            scope='model', align=True
+        )[:, 1:]
+
+        sess.run(tf.global_variables_initializer())
 
         saver = tf.train.Saver()
         ckpt = tf.train.latest_checkpoint(os.path.join(BUCKET, 'models', model_name))
         saver.restore(sess, ckpt)
 
+        import pdb
+        pdb.set_trace()
+
         generated = 0
         while nsamples == 0 or generated < nsamples:
-            out = sess.run(output)
+            out = sess.run(output_tpu)
             for i in range(batch_size):
                 generated += 1
                 text = enc.decode(out[i])
                 print("=" * 40 + " SAMPLE " + str(generated) + " " + "=" * 40)
                 print(text)
+            import pdb
+            pdb.set_trace()
 
 if __name__ == '__main__':
     fire.Fire(sample_model)

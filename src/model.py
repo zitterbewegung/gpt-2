@@ -12,6 +12,12 @@ def get_tpu_addr():
     else:
         return TPUClusterResolver().get_master()
 
+def get_tpu_shards():
+    if 'SHARDS' not in os.environ:
+        return 8
+    else:
+        return int(os.environ['SHARDS'])
+
 def default_hparams():
     return HParams(
         n_vocab=0,
@@ -20,7 +26,7 @@ def default_hparams():
         n_head=12,
         n_layer=12,
         tpu_address=get_tpu_addr(),
-        shards=2
+        shards=get_tpu_shards()
     )
 
 def shape_list(x):

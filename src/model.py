@@ -182,13 +182,13 @@ def mlp(x, scope, n_state, *, hparams):
         sharding = False
         def op(fc_w, fc_b, pr_w, pr_b):
             if 'GPT2_DEBUG' in os.environ:
-                print('mlp_h2_pre', n_state, ny, nx, x, fc_w, fc_b, pr_w, pr_b)
+                print('mlp_pre', n_state, ny, nx, x, fc_w, fc_b, pr_w, pr_b)
             h0 = conv1d_op(x, fc_w, fc_b, ny, nx)
             if 'GPT2_DEBUG' in os.environ:
-                print('mlp_h2', ny, nx, h0, x)
+                print('mlp_h0', ny, nx, h0, x)
             h1 = gelu(h0)
-            if sharding:
-                h1 = h1[0]
+            #if sharding:
+            #    h1 = h1[0]
             if 'GPT2_DEBUG' in os.environ:
                 print('mlp_h1', ny, nx, h1, h0)
             h2 = conv1d_op(h1, pr_w, pr_b, nx, ny)

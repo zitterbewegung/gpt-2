@@ -259,7 +259,7 @@ def main(tpu_cluster=None):
             for x in vs:
                 value = vals[x.name]
                 x.load(value, session)
-            print('Setting counter %d (was %d)', ctr + 1, counter)
+            print('Setting counter %d (was %d)' % (ctr + 1, counter))
             return ctr + 1
 
         if not args.fresh_model:

@@ -121,19 +121,21 @@ def attn(x, scope, n_state, *, past, hparams):
         a = conv1d(a, 'c_proj', n_state)
         return a, present
 
-def conv1d(x, scope, nf, *, w_init_stdev=0.02, b_init=0):
+def conv1d(x, scope, nf, nx=None, *, w_init_stdev=0.02, b_init=0):
     with tf.variable_scope(scope):
-        shape = shape_list(x)
-        *start, nx = shape
+        if nx is None:
+            shape = shape_list(x)
+            *start, nx = shape
         w = conv1d_w(nf, nx, w_init_stdev=w_init_stdev)
         b = conv1d_b(nf, b_init=b_init)
         c = conv1d_op(x, w, b, nf, shape=shape)
         return c
 
-def conv1d_vars(x, scope, nf, *, w_init_stdev=0.02, b_init=0):
+def conv1d_vars(x, scope, nf, nx=None, *, w_init_stdev=0.02, b_init=0):
     with tf.variable_scope(scope):
-        shape = shape_list(x)
-        *start, nx = shape
+        if nx is None:
+            shape = shape_list(x)
+            *start, nx = shape
         w = conv1d_w(nf, nx, w_init_stdev=w_init_stdev)
         b = conv1d_b(nf, b_init=b_init)
         return w, b, nf, nx, start

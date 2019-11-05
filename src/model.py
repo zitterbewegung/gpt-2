@@ -180,7 +180,7 @@ def mlp(x, scope, n_state, *, hparams):
         #h0 = conv1d(x, 'c_fc', n_state)
         ny = None
         sharding = False
-        def op(fc_w, fc_b, pr_w):
+        def op(fc_w, fc_b):
             if 'GPT2_DEBUG' in os.environ:
                 print('mlp_pre', n_state, ny, nx, x, fc_w, fc_b, pr_w, pr_b)
             h0 = conv1d_op(x, fc_w, fc_b, ny, nx)
@@ -189,26 +189,28 @@ def mlp(x, scope, n_state, *, hparams):
             h1 = gelu(h0)
             #if sharding:
             #    h1 = h1[0]
-            if 'GPT2_DEBUG' in os.environ:
-                print('mlp_h1', ny, nx, h1, h0)
-            h2 = conv1d_op(h1, pr_w, pr_b, nx, ny)
-            if 'GPT2_DEBUG' in os.environ:
-                print('mlp_h2', ny, nx, h2, h1)
-            return h2
+            #if 'GPT2_DEBUG' in os.environ:
+            #    print('mlp_h1', ny, nx, h1, h0)
+            #h2 = conv1d_op(h1, pr_w, pr_b, nx, ny)
+            #if 'GPT2_DEBUG' in os.environ:
+            #    print('mlp_h2', ny, nx, h2, h1)
+            #return h2
+            return h1
         if hparams.tpu_address is not None and hparams.shards > 0:
             sharding = True
             ny = n_state // max(1, hparams.shards)
-            h2 = tf.contrib.tpu.shard(op, [fc_w, fc_b, pr_w], input_shard_axes=[-1, -1, 1], output_shard_axes=[2], num_shards=hparams.shards, device_assignment=get_tpus(hparams))
+            h1 = tf.contrib.tpu.shard(op, [fc_w, fc_b], input_shard_axes=[-1, -1], output_shard_axes=[2], num_shards=hparams.shards, device_assignment=get_tpus(hparams))
             if 'GPT2_DEBUG' in os.environ:
-                print('mlp_after', ny, nx, h2, fc_w, fc_b, x)
+                print('mlp_after', ny, nx, h1, fc_w, fc_b, x)
             #h2 = h2[0]
             if 'GPT2_DEBUG' in os.environ:
-                print('mlp_after2', ny, nx, h2, pr_w, pr_b, x)
+                print('mlp_after2', ny, nx, h1, pr_w, pr_b, x)
         else:
             ny = n_state
-            h2 = op(fc_w, fc_b)
+            h1 = op(fc_w, fc_b)
             if 'GPT2_DEBUG' in os.environ:
-                print('mlp_after', ny, nx, h2, fc_w, fc_b, x)
+                print('mlp_after', ny, nx, h1, fc_w, fc_b, x)
+        h2 = conv1d_op(h1, pr_w, pr_b, nx, n_state)
         return h2
 
 def mlp1(x, scope, n_state, *, hparams):

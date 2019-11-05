@@ -75,6 +75,8 @@ def sample_model(
         saver = tf.train.Saver()
         ckpt = tf.train.latest_checkpoint(os.path.join(BUCKET, 'models', model_name))
         saver.restore(sess, ckpt)
+        import pdb
+        pdb.set_trace()
 
         generated = 0
         while nsamples == 0 or generated < nsamples:

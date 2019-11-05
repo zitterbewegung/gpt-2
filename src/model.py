@@ -180,7 +180,7 @@ def mlp(x, scope, n_state, *, hparams):
         #h0 = conv1d(x, 'c_fc', n_state)
         ny = None
         sharding = False
-        def op(fc_w, fc_b):
+        def op(fc_w, fc_b, pr_w, pr_b):
             if 'GPT2_DEBUG' in os.environ:
                 print('mlp_h2_pre', n_state, ny, nx, x, fc_w, fc_b, pr_w, pr_b)
             h0 = conv1d_op(x, fc_w, fc_b, ny, nx)

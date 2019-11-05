@@ -180,21 +180,24 @@ def block(x, scope, *, past, hparams):
         a, present = attn(ln_1, 'attn', nx, past=past, hparams=hparams)
         x = x + a
         ln_2 = norm(x, 'ln_2')
-        def op(input):
-            input = tf.transpose(input)
-            shards = nx // input.shape[-1]
-            n_state = nx*4 // shards
-            if 'GPT2_N_STATE' in os.environ:
-                n_state = int(os.environ['GPT2_N_STATE'])
-            if 'GPT2_DEBUG' in os.environ:
-                print('shards', shards, x.shape, input.shape, nx, n_state)
-            return mlp(input, 'mlp', n_state, hparams=hparams)
-        if hparams.tpu_address is not None:
-            m = tf.contrib.tpu.batch_parallel(op, [tf.transpose(ln_2)], num_shards=hparams.shards, device_assignment=get_tpus(hparams))
-            #m = tf.concat(m, 0)
+        if False:
+            def op(input):
+                # input = tf.transpose(input)
+                shards = nx // input.shape[-1]
+                n_state = nx * 4 // shards
+                if 'GPT2_N_STATE' in os.environ:
+                    n_state = int(os.environ['GPT2_N_STATE'])
+                if 'GPT2_DEBUG' in os.environ:
+                    print('shards', shards, x.shape, input.shape, nx, n_state)
+                return mlp(input, 'mlp', n_state, hparams=hparams)
+            if hparams.tpu_address is not None:
+                m = tf.contrib.tpu.shard(op, [ln_2], input_shard_axes=[2], output_shard_axes=[2], num_shards=hparams.shards, device_assignment=get_tpus(hparams))
+            else:
+                m = op(ln_2)
+            #m = tf.reshape(m, x.shape)
         else:
-            m = op(tf.transpose(ln_2))
-        m = tf.reshape(m, x.shape)
+            n_state = nx*4
+            m = mlp(ln_2, 'mlp', n_state, hparams=hparams)
         x = x + m
         return x, present
 

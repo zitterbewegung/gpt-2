@@ -222,9 +222,15 @@ def model(hparams, X, past=None, scope='model', reuse=tf.AUTO_REUSE):
         batch, sequence = shape_list(X)
 
         wpe = tf.get_variable('wpe', [hparams.n_ctx, hparams.n_embd],
-                             initializer=tf.random_normal_initializer(stddev=0.01))
-        wte = tf.get_variable('wte', [hparams.n_vocab, hparams.n_embd],
+                              initializer=tf.random_normal_initializer(stddev=0.01))
+        #k = 128
+        k = hparams.n_embd // (hparams.n_layer // 2)
+        n = hparams.shards * k
+        n_vocab = (hparams.n_vocab + n) // n * n
+        wte = tf.get_variable('wte0', [n_vocab, hparams.n_embd],
                              initializer=tf.random_normal_initializer(stddev=0.02))
+        wte_ = tf.get_variable('wte', [hparams.n_vocab, hparams.n_embd],
+                              initializer=tf.random_normal_initializer(stddev=0.02))
         past_length = 0 if past is None else tf.shape(past)[-2]
         h = tf.gather(wte, X) + tf.gather(wpe, positions_for(X, past_length))
 

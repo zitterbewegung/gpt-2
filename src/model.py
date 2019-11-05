@@ -171,7 +171,7 @@ def mlp(x, scope, n_state, *, hparams):
         def op(w, b):
             shape = shape_list(w)
             *start, nw = shape
-            result = conv1d_op(h, w, b, nw, shape)
+            result = conv1d_op(h, w, b, nw, shape, transpose_a=True)
             if 'GPT2_DEBUG' in os.environ:
                 print('mlp_h2', h, w, b, result, nw, shape)
             return result

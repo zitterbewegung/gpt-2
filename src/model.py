@@ -202,7 +202,7 @@ def mlp(x, scope, n_state, *, hparams):
             h1 = tf.contrib.tpu.shard(op, [fc_w, fc_b], input_shard_axes=[-1, -1], output_shard_axes=[2], num_shards=hparams.shards, device_assignment=get_tpus(hparams))
             if 'GPT2_DEBUG' in os.environ:
                 print('mlp_after', ny, nx, h1, fc_w, fc_b, x)
-            #h2 = h2[0]
+            h1 = h1[0]
             if 'GPT2_DEBUG' in os.environ:
                 print('mlp_after2', ny, nx, h1, pr_w, pr_b, x)
         else:

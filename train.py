@@ -242,7 +242,19 @@ def main(tpu_cluster=None):
             with open(counter_path, 'r') as fp:
                 counter = int(fp.read()) + 1
 
+        def save_tpu():
+            maketree(os.path.join(CHECKPOINT_DIR, args.run_name))
+            out = os.path.join(CHECKPOINT_DIR, args.run_name, 'model-{}.npy').format(counter)
+            print('Saving', out)
+            vals = [(x.name, x.eval()) for x in tf.trainable_variables()]
+            np.save(out, vals)
+            print('Updating counter')
+            with open(counter_path, 'w') as fp:
+                fp.write(str(counter) + '\n')
+
         def save():
+            if tpu_cluster:
+                return save_tpu()
             maketree(os.path.join(CHECKPOINT_DIR, args.run_name))
             print(
                 'Saving',

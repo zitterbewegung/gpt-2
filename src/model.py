@@ -180,7 +180,7 @@ def mlp(x, scope, n_state, *, hparams):
         #h0 = conv1d(x, 'c_fc', n_state)
         ny = None
         sharding = False
-        def op(fc_w, fc_b, pr_w, pr_b):
+        def op(fc_w, fc_b, pr_w):
             if 'GPT2_DEBUG' in os.environ:
                 print('mlp_pre', n_state, ny, nx, x, fc_w, fc_b, pr_w, pr_b)
             h0 = conv1d_op(x, fc_w, fc_b, ny, nx)
@@ -198,7 +198,7 @@ def mlp(x, scope, n_state, *, hparams):
         if hparams.tpu_address is not None and hparams.shards > 0:
             sharding = True
             ny = n_state // max(1, hparams.shards)
-            h2 = tf.contrib.tpu.shard(op, [fc_w, fc_b, pr_w, pr_b], input_shard_axes=[-1, -1, -1, -1], output_shard_axes=[2], num_shards=hparams.shards, device_assignment=get_tpus(hparams))
+            h2 = tf.contrib.tpu.shard(op, [fc_w, fc_b, pr_w], input_shard_axes=[-1, -1, -1], output_shard_axes=[2], num_shards=hparams.shards, device_assignment=get_tpus(hparams))
             if 'GPT2_DEBUG' in os.environ:
                 print('mlp_after', ny, nx, h2, fc_w, fc_b, x)
             h2 = h2[0]

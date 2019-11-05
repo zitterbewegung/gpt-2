@@ -147,6 +147,8 @@ def group(n, iterable, fillvalue=None):
 
 _tpus = None
 def get_tpus(hparams):
+    if hparams.shards == 1 or hparams.shards == 8:
+        return None
     global _tpus
     if _tpus is None and hparams.tpu_address is not None:
         with tf.Session(hparams.tpu_address) as sess:

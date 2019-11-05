@@ -165,9 +165,9 @@ def block(x, scope, *, past, hparams):
         x = x + a
         ln_2 = norm(x, 'ln_2')
         def op(input):
-            shards = nx / input.shape[0]
+            shards = nx // input.shape[0]
             if 'GPT2_DEBUG' in os.environ:
-                print('shards', shards)
+                print('shards', shards, x.shape, input.shape)
             return mlp(tf.transpose(input), 'mlp', nx*4/shards, hparams=hparams)
         if hparams.tpu_address is not None:
             m = tf.contrib.tpu.batch_parallel(op, [tf.transpose(ln_2)], num_shards=hparams.shards, device_assignment=get_tpus(hparams))

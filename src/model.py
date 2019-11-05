@@ -187,7 +187,7 @@ def mlp(x, scope, n_state, *, hparams):
                 print('mlp_h2', n_state, nx, x, h0, h1, h2)
             return h2
         if hparams.tpu_address is not None and hparams.shards > 0:
-            h2 = tf.contrib.tpu.shard(op, [w, b], input_shard_axes=[-1, -1, 1, -1], output_shard_axes=[0], num_shards=hparams.shards, device_assignment=get_tpus(hparams))
+            h2 = tf.contrib.tpu.shard(op, [fc_w, fc_b, pr_w, pr_b], input_shard_axes=[-1, -1, 1, -1], output_shard_axes=[0], num_shards=hparams.shards, device_assignment=get_tpus(hparams))
         else:
             h2 = op(fc_w, fc_b, pr_w, pr_b)
         return h2

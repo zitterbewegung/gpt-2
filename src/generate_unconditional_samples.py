@@ -4,6 +4,7 @@ import fire
 import json
 import os
 import numpy as np
+import time
 import tensorflow as tf
 from tensorflow.contrib import tpu
 
@@ -93,7 +94,10 @@ def sample_model(
 
         generated = 0
         while nsamples == 0 or generated < nsamples:
+            start = time.time()
             out = sess.run(output_tpu)
+            elapsed = time.time() - start
+            print('Sampled in %f', elapsed)
             for i in range(batch_size):
                 generated += 1
                 text = enc.decode(out[i])

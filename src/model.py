@@ -20,7 +20,7 @@ def default_hparams():
         n_head=12,
         n_layer=12,
         tpu_address=get_tpu_addr(),
-        shards=1
+        shards=2
     )
 
 def shape_list(x):
@@ -143,7 +143,7 @@ def block(x, scope, *, past, hparams):
             return mlp(tf.transpose(input), 'mlp', nx*4, hparams=hparams)
         if hparams.tpu_address is not None:
             m = tf.contrib.tpu.batch_parallel(op, [tf.transpose(ln_2)], num_shards=hparams.shards)
-            m = tf.concat(m, 0)
+            #m = tf.concat(m, 0)
         else:
             m = op(tf.transpose(ln_2))
         m = tf.reshape(m, x.shape)

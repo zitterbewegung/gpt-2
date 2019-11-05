@@ -186,7 +186,7 @@ def mlp(x, scope, n_state, *, hparams):
             if 'GPT2_DEBUG' in os.environ:
                 print('mlp_h2', n_state, nx, x, h0)
             return h0
-        if hparams.tpu_address is not None and hparams.shards > 0:
+        if hparams.tpu_address is not None and hparams.shards > 0 and False:
             h0 = tf.contrib.tpu.shard(op, [fc_w, fc_b], input_shard_axes=[-1, -1], output_shard_axes=[2], num_shards=hparams.shards, device_assignment=get_tpus(hparams))
         else:
             h0 = op(fc_w, fc_b)

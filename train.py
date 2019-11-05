@@ -250,7 +250,7 @@ def main(tpu_cluster=None):
             if ctr is None:
                 ctrs = np.array([[int(y) for y in re.findall(r'model-([0-9]+)[.]npy', x)] for x in glob(os.path.join(base, 'model-*.npy'))]).flatten()
                 if len(ctrs) <= 0:
-                    return
+                    return counter
                 ctr = ctrs.max()
             out = os.path.join(base, 'model-{}.npy').format(ctr)
             print('Loading', out)
@@ -259,13 +259,12 @@ def main(tpu_cluster=None):
             for x in vs:
                 value = vals[x.name]
                 x.load(value, session)
-            global counter
-            print('Setting counter %d (was %d)', ctr, counter)
-            counter = ctr
+            print('Setting counter %d (was %d)', ctr + 1, counter)
+            return ctr + 1
 
         if not args.fresh_model:
             if tpu_cluster:
-                load_tpu(session=sess)
+                counter = load_tpu(session=sess)
 
         def save_tpu():
             maketree(os.path.join(CHECKPOINT_DIR, args.run_name))

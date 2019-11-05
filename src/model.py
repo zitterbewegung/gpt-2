@@ -247,23 +247,23 @@ def model(hparams, X, past=None, scope='model', reuse=tf.AUTO_REUSE):
         h = norm(h, 'ln_f')
 
         # Language model loss.  Do tokens <n predict token n?
-        def op(h, wte):
-            h_flat = tf.reshape(h, [batch * sequence, hparams.n_embd // hparams.shards])
+        h_flat = tf.reshape(h, [batch * sequence, hparams.n_embd])
+        def op(wte):
             result = tf.matmul(h_flat, wte, transpose_b=True)
             if 'GPT2_DEBUG' in os.environ:
-                print('op_shape', [batch * sequence // hparams.shards, hparams.n_embd], batch, sequence, hparams.shards, hparams.n_embd)
-                print('op', h, h_flat, wte, result)
+                #print('op_shape', [batch * sequence // hparams.shards, hparams.n_embd], batch, sequence, hparams.shards, hparams.n_embd)
+                print('op', h_flat, wte, result)
             return result
         if hparams.tpu_address is not None:
             input_shard_axis_0 = 1 if not 'GPT2_INPUT_SHARD_AXIS_0' in os.environ else int(os.environ['GPT2_INPUT_SHARD_AXIS_0'])
             input_shard_axis_1 = 1 if not 'GPT2_INPUT_SHARD_AXIS_1' in os.environ else int(os.environ['GPT2_INPUT_SHARD_AXIS_1'])
             output_shard_axis_0 = 0 if not 'GPT2_OUTPUT_SHARD_AXIS_0' in os.environ else int(os.environ['GPT2_OUTPUT_SHARD_AXIS_0'])
             output_reduce_axis = 0 if not 'GPT2_OUTPUT_REDUCE_AXIS' in os.environ else int(os.environ['GPT2_OUTPUT_REDUCE_AXIS'])
-            logits0 = tf.contrib.tpu.shard(op, [h, wte], input_shard_axes=[input_shard_axis_0, input_shard_axis_1], output_shard_axes=[output_shard_axis_0], num_shards=hparams.shards, device_assignment=get_tpus(hparams))
+            logits0 = tf.contrib.tpu.shard(op, [wte], input_shard_axes=[input_shard_axis_0, input_shard_axis_1], output_shard_axes=[output_shard_axis_0], num_shards=hparams.shards, device_assignment=get_tpus(hparams))
             if output_reduce_axis >= 0:
                 logits0 = tf.reduce_sum(logits0, axis=output_reduce_axis, keepdims=True)
         else:
-            logits0 = op(h, wte)
+            logits0 = op(wte)
         logits = tf.reshape(logits0, [batch, sequence, n_vocab])
         if 'GPT2_DEBUG' in os.environ:
             print('logits', logits0, logits, batch, sequence, n_vocab)

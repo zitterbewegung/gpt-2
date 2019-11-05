@@ -149,7 +149,9 @@ def conv1d_op(x, w, b, nf, shape=None, **kws):
     if shape is None:
         shape = shape_list(x)
     *start, nx = shape or shape_list(x)
-    X = tf.reshape(x, [nx, -1])
+    if 'GPT2_DEBUG' in os.environ:
+        print('conv1d_op', x, w, b, start, nx, shape)
+    X = tf.reshape(x, [-1, nx])
     W = tf.reshape(w, [-1, nf])
     Y = tf.matmul(X, W, **kws) + b
     return tf.reshape(Y, start+[nf])

@@ -163,15 +163,17 @@ def mlp(x, scope, n_state, *, hparams):
         nf = nx
         with tf.variable_scope('c_proj'):
             shape = shape_list(h)
-            *start, nx = shape
-            w = conv1d_w(nf, nx)
+            *start, nh = shape
+            if 'GPT2_DEBUG' in os.environ:
+                print('mlp_h2_pre', nf, nh, x, h)
+            w = conv1d_w(nf, nh)
             b = conv1d_b(nf)
         def op(w, b):
-            shape = shape_list(h)
-            *start, nx = shape
-            result = conv1d_op(h, w, b, nx, shape)
+            #shape = shape_list(h)
+            #*start, nx = shape
+            result = conv1d_op(h, w, b, nh, shape)
             if 'GPT2_DEBUG' in os.environ:
-                print('mlp_h2', h, w, b, result, nx, shape)
+                print('mlp_h2', h, w, b, result, nh, shape)
             return result
         if hparams.tpu_address is not None and hparams.shards > 0:
             input_shard_axis_0 = 0 if not 'GPT2_MLP_INPUT_SHARD_AXIS_0' in os.environ else int(os.environ['GPT2_MLP_INPUT_SHARD_AXIS_0'])

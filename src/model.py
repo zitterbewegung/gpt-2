@@ -180,6 +180,8 @@ def mlp(x, scope, n_state, *, hparams):
         #h0 = conv1d(x, 'c_fc', n_state)
         def op(fc_w, fc_b, pr_w, pr_b):
             ny = n_state // max(1,hparams.shards)
+            if 'GPT2_DEBUG' in os.environ:
+                print('mlp_h2_pre', n_state, ny, nx, x, fc_w, fc_b, pr_w, pr_b)
             h0 = conv1d_op(x, fc_w, fc_b, ny, nx)
             h1 = gelu(h0)
             h2 = conv1d_op(h1, pr_w, pr_b, nx, ny)

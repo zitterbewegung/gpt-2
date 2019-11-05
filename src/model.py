@@ -145,21 +145,39 @@ def attn(x, scope, n_state, *, past, hparams):
         a = conv1d(a, 'c_proj', n_state)
         return a, present
 
+def conv1d(x, scope, nf, *, w_init_stdev=0.02, b_init=0):
+    with tf.variable_scope(scope):
+        shape = shape_list(x)
+        *start, nx = shape
+        w = conv1d_w(nf, nx, w_init_stdev=w_init_stdev)
+        b = conv1d_b(nf, b_init=b_init)
+        c = conv1d_op(x, w, b, nf, shape=shape)
+        return c
 
 def mlp(x, scope, n_state, *, hparams):
     with tf.variable_scope(scope):
         nx = x.shape[-1].value
         h = gelu(conv1d(x, 'c_fc', n_state))
-        def op(h):
-            result = conv1d(h, 'c_proj', nx)
+        nf = nx
+        with tf.variable_scope('c_proj'):
+            shape = shape_list(x)
+            *start, nx = shape
+            w = conv1d_w(nf, nx)
+            b = conv1d_b(nf)
+        def op(h, w, b):
+            shape = shape_list(h)
+            *start, nx = shape
+            result = conv1d_op(h, w, b, nx)
             if 'GPT2_DEBUG' in os.environ:
-                print('mlp_h2', h, result)
+                print('mlp_h2', h, w, b, result, nx, shape)
             return result
         if hparams.tpu_address is not None and hparams.shards > 0:
             input_shard_axis_0 = 0 if not 'GPT2_MLP_INPUT_SHARD_AXIS_0' in os.environ else int(os.environ['GPT2_MLP_INPUT_SHARD_AXIS_0'])
+            input_shard_axis_1 = -1 if not 'GPT2_MLP_INPUT_SHARD_AXIS_1' in os.environ else int(os.environ['GPT2_MLP_INPUT_SHARD_AXIS_1'])
+            input_shard_axis_2 = -1 if not 'GPT2_MLP_INPUT_SHARD_AXIS_2' in os.environ else int(os.environ['GPT2_MLP_INPUT_SHARD_AXIS_2'])
             output_shard_axis_0 = 0 if not 'GPT2_MLP_OUTPUT_SHARD_AXIS_0' in os.environ else int(os.environ['GPT2_MLP_OUTPUT_SHARD_AXIS_0'])
             output_reduce_axis = -1 if not 'GPT2_MLP_OUTPUT_REDUCE_AXIS' in os.environ else int(os.environ['GPT2_MLP_OUTPUT_REDUCE_AXIS'])
-            h2 = tf.contrib.tpu.shard(op, [h], input_shard_axes=[input_shard_axis_0], output_shard_axes=[output_shard_axis_0], num_shards=hparams.shards, device_assignment=get_tpus(hparams))
+            h2 = tf.contrib.tpu.shard(op, [h, w, b], input_shard_axes=[input_shard_axis_0, input_shard_axis_1, input_shard_axis_2], output_shard_axes=[output_shard_axis_0], num_shards=hparams.shards, device_assignment=get_tpus(hparams))
             if output_reduce_axis >= 0:
                 h2 = tf.reduce_sum(h2, axis=output_reduce_axis, keepdims=True)
         else:

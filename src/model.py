@@ -243,11 +243,18 @@ def model(hparams, X, past=None, scope='model', reuse=tf.AUTO_REUSE):
         # Language model loss.  Do tokens <n predict token n?
         h_flat = tf.reshape(h, [batch*sequence, hparams.n_embd])
         def op(h_flat, wte):
-            return tf.matmul(h_flat, wte, transpose_b=True)
+            result = tf.matmul(h_flat, wte, transpose_b=True)
+            if 'GPT2_DEBUG' in os.environ:
+                print('op', h_flat, wte, result)
         if hparams.tpu_address is not None:
-            logits = tf.contrib.tpu.shard(op, [h_flat, wte], input_shard_axes=[1, 1], output_shard_axes=[0], num_shards=hparams.shards, device_assignment=get_tpus(hparams))
+            input_shard_axis_0 = 1 if not 'GPT2_INPUT_SHARD_AXIS_0' in os.environ else int(os.environ['GPT2_INPUT_SHARD_AXIS_0'])
+            input_shard_axis_1 = 1 if not 'GPT2_INPUT_SHARD_AXIS_1' in os.environ else int(os.environ['GPT2_INPUT_SHARD_AXIS_1'])
+            output_shard_axis_0 = 1 if not 'GPT2_OUTPUT_SHARD_AXIS_0' in os.environ else int(os.environ['GPT2_OUTPUT_SHARD_AXIS_0'])
+            logits0 = tf.contrib.tpu.shard(op, [h_flat, wte], input_shard_axes=[input_shard_axis_0, input_shard_axis_1], output_shard_axes=[output_shard_axis_0], num_shards=hparams.shards, device_assignment=get_tpus(hparams))
         else:
-            logits = op(h_flat, wte)
-        logits = tf.reshape(logits, [batch, sequence, hparams.n_vocab])
+            logits0 = op(h_flat, wte)
+        logits = tf.reshape(logits0, [batch, sequence, hparams.n_vocab])
+        if 'GPT2_DEBUG' in os.environ:
+            print('logits', logits0, logits, batch, sequence, hparams.n_vocab)
         results['logits'] = logits
         return results

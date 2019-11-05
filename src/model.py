@@ -177,13 +177,15 @@ def mlp(x, scope, n_state, *, hparams):
         if 'GPT2_DEBUG' in os.environ:
             print('c_fc_pre', fc_w, fc_b, fc_nf, fc_nx)
             print('c_proj_pre', pr_w, pr_b, pr_nf, pr_nx)
-        #def op(fc_w, fc_b, proj_w, proj_b):
         #h0 = conv1d(x, 'c_fc', n_state)
-        h0 = conv1d_op(x, fc_w, fc_b, n_state, nx)
-        h1 = gelu(h0)
-        h2 = conv1d_op(h1, pr_w, pr_b, nx, n_state)
-        if 'GPT2_DEBUG' in os.environ:
-            print('mlp_h2', n_state, nx, x, h0, h1, h2)
+        def op(fc_w, fc_b, pr_w, pr_b):
+            h0 = conv1d_op(x, fc_w, fc_b, n_state, nx)
+            h1 = gelu(h0)
+            h2 = conv1d_op(h1, pr_w, pr_b, nx, n_state)
+            if 'GPT2_DEBUG' in os.environ:
+                print('mlp_h2', n_state, nx, x, h0, h1, h2)
+            return h2
+        h2 = op(fc_w, fc_b, pr_w, pr_b)
         return h2
 
 def mlp1(x, scope, n_state, *, hparams):

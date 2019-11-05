@@ -138,7 +138,7 @@ def conv1d_vars(x, scope, nf, nx=None, *, w_init_stdev=0.02, b_init=0):
             *start, nx = shape
         w = conv1d_w(nf, nx, w_init_stdev=w_init_stdev)
         b = conv1d_b(nf, b_init=b_init)
-        return w, b, nf, nx, start
+        return w, b, nf, nx
 
 def conv1d_w(nf, nx, *, w_init_stdev=0.02):
     return tf.get_variable('w', [1, nx, nf], initializer=tf.random_normal_initializer(stddev=w_init_stdev))
@@ -171,11 +171,11 @@ def mlp(x, scope, n_state, *, hparams):
 def mlp(x, scope, n_state, *, hparams):
     with tf.variable_scope(scope):
         nx = x.shape[-1].value
-        fc_w, fc_b, fc_nf, fc_nx, fc_start = conv1d_vars(x, 'c_fc', n_state, nx)
-        pr_w, pr_b, pr_nf, pr_nx, pr_start = conv1d_vars(x, 'c_proj', nx, n_state)
+        fc_w, fc_b, fc_nf, fc_nx = conv1d_vars(x, 'c_fc', n_state, nx)
+        pr_w, pr_b, pr_nf, pr_nx = conv1d_vars(x, 'c_proj', nx, n_state)
         if 'GPT2_DEBUG' in os.environ:
-            print('c_fc_pre', fc_w, fc_b, fc_nf, fc_nx, fc_start)
-            print('c_proj_pre', pr_w, pr_b, pr_nf, pr_nx, pr_start)
+            print('c_fc_pre', fc_w, fc_b, fc_nf, fc_nx)
+            print('c_proj_pre', pr_w, pr_b, pr_nf, pr_nx)
         #def op(fc_w, fc_b, proj_w, proj_b):
         h0 = conv1d(x, 'c_fc', n_state)
         h1 = gelu(h0)

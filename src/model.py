@@ -65,21 +65,6 @@ def merge_states(x):
     *start, a, b = shape_list(x)
     return tf.reshape(x, start + [a*b])
 
-def conv1d(x, scope, nf, *, w_init_stdev=0.02, b_init=0):
-    with tf.variable_scope(scope):
-        shape = shape_list(x)
-        *start, nx = shape
-        w = conv1d_w(nf, nx, w_init_stdev=w_init_stdev)
-        b = conv1d_b(nf, b_init=b_init)
-        c = conv1d_op(x, w, b, nf, shape=shape)
-        return c
-
-def conv1d_w(nf, nx, *, w_init_stdev=0.02):
-    return tf.get_variable('w', [1, nx, nf], initializer=tf.random_normal_initializer(stddev=w_init_stdev))
-
-def conv1d_b(nf, *, b_init=0):
-    return tf.get_variable('b', [nf], initializer=tf.constant_initializer(b_init))
-
 def attention_mask(nd, ns, *, dtype):
     """1's in the lower triangle, counting from the lower right corner.
 
@@ -145,6 +130,20 @@ def conv1d(x, scope, nf, *, w_init_stdev=0.02, b_init=0):
         c = conv1d_op(x, w, b, nf, shape=shape)
         return c
 
+def conv1d_vars(x, scope, nf, *, w_init_stdev=0.02, b_init=0):
+    with tf.variable_scope(scope):
+        shape = shape_list(x)
+        *start, nx = shape
+        w = conv1d_w(nf, nx, w_init_stdev=w_init_stdev)
+        b = conv1d_b(nf, b_init=b_init)
+        return w, b, nf, nx, start
+
+def conv1d_w(nf, nx, *, w_init_stdev=0.02):
+    return tf.get_variable('w', [1, nx, nf], initializer=tf.random_normal_initializer(stddev=w_init_stdev))
+
+def conv1d_b(nf, *, b_init=0):
+    return tf.get_variable('b', [nf], initializer=tf.constant_initializer(b_init))
+
 def conv1d_op(x, w, b, nf, shape=None, **kws):
     if shape is None:
         shape = shape_list(x)
@@ -159,6 +158,22 @@ def conv1d_op(x, w, b, nf, shape=None, **kws):
 def mlp(x, scope, n_state, *, hparams):
     with tf.variable_scope(scope):
         nx = x.shape[-1].value
+        h0 = conv1d(x, 'c_fc', n_state)
+        h1 = gelu(h0)
+        h2 = conv1d(h1, 'c_proj', nx)
+        if 'GPT2_DEBUG' in os.environ:
+            print('mlp_h2', n_state, nx, x, h0, h1, h2)
+        return h2
+
+def mlp(x, scope, n_state, *, hparams):
+    with tf.variable_scope(scope):
+        nx = x.shape[-1].value
+        fc_w, fc_b, fc_nf, fc_nx, fc_start = conv1d_vars(x, 'c_fc', n_state)
+        pr_w, pr_b, pr_nf, pr_nx, pr_start = conv1d_vars(x, 'c_proj', nx)
+        if 'GPT2_DEBUG' in os.environ:
+            print('c_fc_pre', fc_w, fc_b, fc_nf, fc_nx, fc_start)
+            print('c_proj_pre', pr_w, pr_b, pr_nf, pr_nx, pr_start)
+        #def op(fc_w, fc_b, proj_w, proj_b):
         h0 = conv1d(x, 'c_fc', n_state)
         h1 = gelu(h0)
         h2 = conv1d(h1, 'c_proj', nx)

@@ -264,8 +264,8 @@ def model(hparams, X, past=None, scope='model', reuse=tf.AUTO_REUSE):
                 logits0 = tf.reduce_sum(logits0, axis=output_reduce_axis, keepdims=True)
         else:
             logits0 = op(h, wte)
-        logits = tf.reshape(logits0, [batch, sequence, hparams.n_vocab])
+        logits = tf.reshape(logits0, [batch, sequence, n_vocab])
         if 'GPT2_DEBUG' in os.environ:
-            print('logits', logits0, logits, batch, sequence, hparams.n_vocab)
+            print('logits', logits0, logits, batch, sequence, n_vocab)
         results['logits'] = logits
         return results

@@ -184,17 +184,19 @@ def mlp(x, scope, n_state, *, hparams):
                 print('mlp_h2_pre', n_state, ny, nx, x, fc_w, fc_b, pr_w, pr_b)
             h0 = conv1d_op(x, fc_w, fc_b, ny, nx)
             if 'GPT2_DEBUG' in os.environ:
-                print('mlp_h2', ny, nx, x, h0)
-            return h0
+                print('mlp_h2', ny, nx, h0, x)
+            h1 = gelu(h0)
+            if 'GPT2_DEBUG' in os.environ:
+                print('mlp_h1', ny, nx, h1, x)
+            return h1
         if hparams.tpu_address is not None and hparams.shards > 0:
             ny = n_state // max(1, hparams.shards)
-            h0 = tf.contrib.tpu.shard(op, [fc_w, fc_b], input_shard_axes=[-1, -1], output_shard_axes=[2], num_shards=hparams.shards, device_assignment=get_tpus(hparams))
+            h1 = tf.contrib.tpu.shard(op, [fc_w, fc_b], input_shard_axes=[-1, -1], output_shard_axes=[2], num_shards=hparams.shards, device_assignment=get_tpus(hparams))
         else:
             ny = n_state
-            h0 = op(fc_w, fc_b)
+            h1 = op(fc_w, fc_b)
         if 'GPT2_DEBUG' in os.environ:
-            print('mlp_after', ny, nx, h0, fc_w, fc_b, x)
-        h1 = gelu(h0)
+            print('mlp_after', ny, nx, h1, fc_w, fc_b, x)
         h2 = conv1d_op(h1, pr_w, pr_b, nx, n_state)
         return h2
 

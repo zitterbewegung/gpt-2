@@ -144,12 +144,13 @@ def conv1d_w(nf, nx, *, w_init_stdev=0.02):
 def conv1d_b(nf, *, b_init=0):
     return tf.get_variable('b', [nf], initializer=tf.constant_initializer(b_init))
 
-def conv1d_op(x, w, b, nf, shape=None, **kws):
-    if shape is None:
-        shape = shape_list(x)
-    *start, nx = shape or shape_list(x)
+def conv1d_op(x, w, b, nf, nx=None, shape=None, **kws):
+    if nx is None:
+        if shape is None:
+            shape = shape_list(x)
+        *start, nx = shape or shape_list(x)
     if 'GPT2_DEBUG' in os.environ:
-        print('conv1d_op', start, nx, nf, x, w, b)
+        print('conv1d_op', nx, nf, x, w, b)
     X = tf.reshape(x, [-1, nx])
     W = tf.reshape(w, [-1, nf])
     Y = tf.matmul(X, W, **kws) + b
@@ -168,8 +169,8 @@ def mlp(x, scope, n_state, *, hparams):
 def mlp(x, scope, n_state, *, hparams):
     with tf.variable_scope(scope):
         nx = x.shape[-1].value
-        fc_w, fc_b, fc_nf, fc_nx, fc_start = conv1d_vars(x, 'c_fc', n_state)
-        pr_w, pr_b, pr_nf, pr_nx, pr_start = conv1d_vars(x, 'c_proj', nx)
+        fc_w, fc_b, fc_nf, fc_nx, fc_start = conv1d_vars(x, 'c_fc', n_state, nx)
+        pr_w, pr_b, pr_nf, pr_nx, pr_start = conv1d_vars(x, 'c_proj', nx, n_state)
         if 'GPT2_DEBUG' in os.environ:
             print('c_fc_pre', fc_w, fc_b, fc_nf, fc_nx, fc_start)
             print('c_proj_pre', pr_w, pr_b, pr_nf, pr_nx, pr_start)

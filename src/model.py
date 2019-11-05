@@ -1,6 +1,16 @@
 import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.training import HParams
+import os
+
+from tensorflow.contrib.cluster_resolver import TPUClusterResolver
+
+def get_tpu_addr():
+    # Get the TPU's location
+    if 'COLAB_TPU_ADDR' not in os.environ:
+        return None
+    else:
+        return TPUClusterResolver().get_master()
 
 def default_hparams():
     return HParams(
@@ -9,6 +19,8 @@ def default_hparams():
         n_embd=768,
         n_head=12,
         n_layer=12,
+        tpu_address=get_tpu_addr(),
+        shards=8
     )
 
 def shape_list(x):
@@ -123,9 +135,16 @@ def mlp(x, scope, n_state, *, hparams):
 def block(x, scope, *, past, hparams):
     with tf.variable_scope(scope):
         nx = x.shape[-1].value
-        a, present = attn(norm(x, 'ln_1'), 'attn', nx, past=past, hparams=hparams)
+        ln_1 = norm(x, 'ln_1')
+        a, present = attn(ln_1, 'attn', nx, past=past, hparams=hparams)
         x = x + a
-        m = mlp(norm(x, 'ln_2'), 'mlp', nx*4, hparams=hparams)
+        ln_2 = norm(x, 'ln_2')
+        def op(input):
+            return mlp(input, 'mlp', nx*4, hparams=hparams)
+        if hparams.tpu_address is not None:
+            m = tf.contrib.tpu.batch_parallel(op, [ln_2], num_shards=hparams.shards)
+        else:
+            m = op(ln_2)
         x = x + m
         return x, present
 

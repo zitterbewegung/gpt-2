@@ -5,6 +5,7 @@ import json
 import os
 import numpy as np
 import tensorflow as tf
+from tensorflow.contrib import tpu
 
 import model, sample, encoder
 
@@ -16,7 +17,8 @@ def sample_model(
     length=None,
     temperature=1,
     top_k=0,
-    top_p=0.0
+    top_p=0.0,
+    init_tpu=False
 ):
     """
     Run the sample_model
@@ -49,7 +51,13 @@ def sample_model(
     elif length > hparams.n_ctx:
         raise ValueError("Can't get samples longer than window size: %s" % hparams.n_ctx)
 
-    with tf.Session(graph=tf.Graph()) as sess:
+    tpu_address = hparams.tpu_address
+    with tf.Session(hparams.tpu_address, graph=tf.Graph()) as sess:
+        if tpu_address:
+            print("Using TPU %s" % tpu_address)
+        if tpu_address and args.init_tpu:
+            print("initializing TPU system...")
+            sess.run(tpu.initialize_system())
         np.random.seed(seed)
         tf.set_random_seed(seed)
 

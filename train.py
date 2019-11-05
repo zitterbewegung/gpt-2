@@ -254,7 +254,7 @@ def main(tpu_cluster=None):
                 ctr = ctrs.max()
             out = os.path.join(base, 'model-{}.npy').format(ctr)
             print('Loading', out)
-            vals = dict(np.load(out))
+            vals = dict(np.load(out, allow_pickle=True))
             vs = tf.trainable_variables()
             for x in vs:
                 value = vals[x.name]

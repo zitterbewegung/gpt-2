@@ -148,7 +148,7 @@ def group(n, iterable, fillvalue=None):
 _tpus = None
 def get_tpus(hparams):
     global _tpus
-    if _tpus is None and harapms.tpu_address is not None:
+    if _tpus is None and hparams.tpu_address is not None:
         with tf.Session(hparams.tpu_address) as sess:
             devices = sess.list_devices()
             tpus = devices[-1 - 8:-1]

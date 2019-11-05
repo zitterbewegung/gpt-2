@@ -65,13 +65,29 @@ def merge_states(x):
     *start, a, b = shape_list(x)
     return tf.reshape(x, start + [a*b])
 
-def conv1d(x, scope, nf, *, w_init_stdev=0.02):
+def conv1d(x, scope, nf, *, w_init_stdev=0.02, b_init=0):
     with tf.variable_scope(scope):
-        *start, nx = shape_list(x)
-        w = tf.get_variable('w', [1, nx, nf], initializer=tf.random_normal_initializer(stddev=w_init_stdev))
-        b = tf.get_variable('b', [nf], initializer=tf.constant_initializer(0))
-        c = tf.reshape(tf.matmul(tf.reshape(x, [-1, nx]), tf.reshape(w, [-1, nf]))+b, start+[nf])
+        shape = shape_list(x)
+        *start, nx = shape
+        w = conv1d_w(nf, nx, w_init_stdev=w_init_stdev)
+        b = conv1d_b(nf, b_init=b_init)
+        c = conv1d_op(x, w, b, nf, shape=shape)
         return c
+
+def conv1d_w(nf, nx, *, w_init_stdev=0.02):
+    return tf.get_variable('w', [1, nx, nf], initializer=tf.random_normal_initializer(stddev=w_init_stdev))
+
+def conv1d_b(nf, *, b_init=0):
+    return tf.get_variable('b', [nf], initializer=tf.constant_initializer(b_init))
+
+def conv1d_op(x, w, b, nf, shape=None):
+    if shape is None:
+        shape = shape_list(x)
+    *start, nx = shape or shape_list(x)
+    X = tf.reshape(x, [-1, nx])
+    W = tf.reshape(w, [-1, nf])
+    Y = tf.matmul(X, W) + b
+    return tf.reshape(Y, start+[nf])
 
 def attention_mask(nd, ns, *, dtype):
     """1's in the lower triangle, counting from the lower right corner.

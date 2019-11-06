@@ -248,17 +248,19 @@ def main(tpu_cluster=None):
             if base is None:
                 base = os.path.join(CHECKPOINT_DIR, args.run_name)
             if ctr is None:
-                ctrs = np.array([[int(y) for y in re.findall(r'model-([0-9]+)[.]npy', x)] for x in glob(os.path.join(base, 'model-*.npy'))]).flatten()
+                ctrs = np.array([[int(y) for y in re.findall(r'model-([0-9]+)(-[0-9]+)?[.]npy', x)] for x in glob(os.path.join(base, 'model-*.npy'))]).flatten()
                 if len(ctrs) <= 0:
                     return counter
                 ctr = ctrs.max()
-            out = os.path.join(base, 'model-{}.npy').format(ctr)
-            print('Loading', out)
-            vals = dict(np.load(out, allow_pickle=True))
-            vs = tf.trainable_variables()
-            for x in vs:
-                value = vals[x.name]
-                x.load(value, session)
+            for out in glob(os.path.join(base, 'model-{}*.npy').format(ctr)):
+                print('Loading', out)
+                xs = np.load(out, allow_pickle=True)
+                for k, v in xs:
+                    vs = tf.trainable_variables()
+                    for x in vs:
+                        if x.name == k:
+                            print('Loading', k, v.shape)
+                            x.load(v, session)
             print('Setting counter %d (was %d)' % (ctr + 1, counter))
             return ctr + 1
 
@@ -268,10 +270,30 @@ def main(tpu_cluster=None):
 
         def save_tpu():
             maketree(os.path.join(CHECKPOINT_DIR, args.run_name))
-            out = os.path.join(CHECKPOINT_DIR, args.run_name, 'model-{}.npy').format(counter)
-            print('Saving', out)
-            vals = [(x.name, x.eval()) for x in tf.trainable_variables()]
-            np.save(out, vals)
+            i = 0
+            vs = tf.trainable_variables()
+            seen = set()
+            while True:
+                out = os.path.join(CHECKPOINT_DIR, args.run_name, 'model-{}-{}.npy').format(counter, i)
+                print('Saving', out)
+                fetched = False
+                vals = []
+                param_count = 0
+                for x in vs:
+                    name = x.name
+                    if name not in seen:
+                        params = np.prod(x.shape.as_list())
+                        param_count += params
+                        value = x.eval()
+                        vals += [[name, value]]
+                        seen.add(name)
+                        fetched = True
+                        if param_count > 500000:
+                            break
+                if not fetched:
+                    break
+                np.save(out, vals)
+                i += 1
             print('Updating counter')
             with open(counter_path, 'w') as fp:
                 fp.write(str(counter) + '\n')

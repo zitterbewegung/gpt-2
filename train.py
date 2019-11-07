@@ -75,10 +75,15 @@ parser.add_argument('--float16', default=False, action='store_true', help='Use f
 #parser.add_argument('--n_layer', type=int, default=24, help='For a fresh model, how large should n_layer be?')
 
 # 117M
-parser.add_argument('--n_ctx', type=int, default=1024, help='For a fresh model, how large should n_ctx be?')
-parser.add_argument('--n_embd', type=int, default=768, help='For a fresh model, how large should n_embd be?')
-parser.add_argument('--n_head', type=int, default=12, help='For a fresh model, how large should n_head be?')
-parser.add_argument('--n_layer', type=int, default=12, help='For a fresh model, how large should n_layer be?')
+#parser.add_argument('--n_ctx', type=int, default=1024, help='For a fresh model, how large should n_ctx be?')
+#parser.add_argument('--n_embd', type=int, default=768, help='For a fresh model, how large should n_embd be?')
+#parser.add_argument('--n_head', type=int, default=12, help='For a fresh model, how large should n_head be?')
+#parser.add_argument('--n_layer', type=int, default=12, help='For a fresh model, how large should n_layer be?')
+
+parser.add_argument('--n_ctx', type=int, default=-1, help='For a fresh model, how large should n_ctx be?')
+parser.add_argument('--n_embd', type=int, default=-1, help='For a fresh model, how large should n_embd be?')
+parser.add_argument('--n_head', type=int, default=-1, help='For a fresh model, how large should n_head be?')
+parser.add_argument('--n_layer', type=int, default=-1, help='For a fresh model, how large should n_layer be?')
 
 def maketree(path):
     try:
@@ -105,10 +110,13 @@ def main(tpu_cluster=None):
       hparams.dtype = tf.bfloat16
     with open(os.path.join('models', args.model_name, 'hparams.json')) as f:
         hparams.override_from_dict(json.load(f))
-    if args.fresh_model:
+    if args.n_ctx >= 0:
         hparams.n_ctx=args.n_ctx
+    if args.n_embd >= 0:
         hparams.n_embd=args.n_embd
+    if args.n_head >= 0:
         hparams.n_head=args.n_head
+    if args.n_layer >= 0:
         hparams.n_layer=args.n_layer
 
     if args.sample_length < 0:

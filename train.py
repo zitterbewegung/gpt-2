@@ -180,6 +180,7 @@ def main(tpu_cluster=None):
             import tensor2tensor.models.research
             from tensor2tensor.utils import registry
             ada_hparams = registry.hparams('afx_mimic_adam')
+            ada_hparams.optimizer_adafactor_beta1 = 0.0
             opt = tensor2tensor.utils.optimize.adafactor(learning_rate=args.learning_rate, hparams=ada_hparams)
         else:
             exit('Bad optimizer:', args.optimizer)

@@ -311,7 +311,9 @@ def main(tpu_cluster=None):
                 for x in tqdm.tqdm(vs):
                     name = x.name
                     if name not in seen:
-                        params = np.prod(x.shape.as_list())
+                        shape = x.shape.as_list()
+                        params = np.prod(shape)
+                        print('Fetching', name, shape, params)
                         param_count += params
                         if args.float16:
                             value = tf.to_float(x).eval()

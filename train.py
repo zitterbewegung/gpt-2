@@ -310,21 +310,26 @@ def main(tpu_cluster=None):
                 param_count = 0
                 for x in tqdm.tqdm(vs):
                     name = x.name
+                    ks = []
+                    xs = []
                     if name not in seen:
                         shape = x.shape.as_list()
                         params = np.prod(shape)
                         dtype = x.dtype
                         print('Fetching', name, shape, params, dtype)
                         param_count += params
-                        if args.float16:
-                            value = tf.to_float(x).eval()
-                        else:
-                            value = x.eval()
-                        vals += [[name, value]]
+                        ks += [name]
+                        xs += [x]
                         seen.add(name)
                         fetched = True
                         if param_count > 320000000:
                             break
+                    print('Fetching a batch of variables...')
+                    values = sess.run(xs)
+                    if args.float16:
+                        values = [x.astype(np.float32) for x in values]
+                    for name, value in zip(ks, values):
+                        vals += [[name, value]]
                 if not fetched:
                     break
                 print('Saving', out)

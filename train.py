@@ -85,6 +85,9 @@ parser.add_argument('--n_embd', type=int, default=-1, help='For a fresh model, h
 parser.add_argument('--n_head', type=int, default=-1, help='For a fresh model, how large should n_head be?')
 parser.add_argument('--n_layer', type=int, default=-1, help='For a fresh model, how large should n_layer be?')
 
+parser.add_argument('--debug_print_all_vars', default=False, action='store_true', help="Print all variables after running one training step")
+parser.add_argument('--debug_print_trainable_vars', default=False, action='store_true', help="Print trainable variables after running one training step")
+
 def maketree(path):
     try:
         os.makedirs(path)
@@ -451,6 +454,28 @@ def main(tpu_cluster=None):
                 prev_time = now
 
                 counter += 1
+
+                if args.debug_print_all_variables:
+                    print('all variables:')
+                    print('name/shape/parameter_count')
+                    param_count = 0
+                    for x in tf.all_variables():
+                        count = np.prod(x.shape.to_list)
+                        print(x.name, x.shape.to_list(), count)
+                        param_count += count
+                    print('Total parameters:', param_count)
+                    args.debug_print_all_variables = False
+
+                if args.debug_print_trainable_variables:
+                    print('trainable variables:')
+                    print('name/shape/parameter_count')
+                    param_count = 0
+                    for x in tf.trainable_variables():
+                        count = np.prod(x.shape.to_list)
+                        print(x.name, x.shape.to_list(), count)
+                        param_count += count
+                    print('Total parameters:', param_count)
+                    args.debug_print_trainable_variables = False
         except KeyboardInterrupt:
             print('interrupted')
             if args.save_on_ctrlc:

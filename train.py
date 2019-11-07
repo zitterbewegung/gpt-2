@@ -330,6 +330,7 @@ def main(tpu_cluster=None):
                 print('Uploaded in {} seconds'.format(t1 - t0))
 
         if not args.fresh_model:
+            ok = False
             if tpu_cluster:
                 counter, ok = load_tpu(session=sess)
             if not ok:

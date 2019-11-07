@@ -62,7 +62,7 @@ def conv1d(x, scope, nf, *, w_init_stdev=0.02, hparams=None):
     dtype = hparams.dtype if hparams else tf.float32
     with tf.variable_scope(scope, dtype=dtype):
         *start, nx = shape_list(x)
-        w = get_variable 'w') or tf.get_variable('w', [1, nx, nf], initializer=tf.random_normal_initializer(stddev=w_init_stdev))
+        w = get_variable('w') or tf.get_variable('w', [1, nx, nf], initializer=tf.random_normal_initializer(stddev=w_init_stdev))
         b = get_variable('b') or tf.get_variable('b', [nf], initializer=tf.constant_initializer(0))
         c = tf.reshape(tf.matmul(tf.reshape(x, [-1, nx]), tf.reshape(w, [-1, nf]))+b, start+[nf])
         return c

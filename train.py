@@ -308,7 +308,7 @@ def main(tpu_cluster=None):
                 fetched = False
                 vals = []
                 param_count = 0
-                for x in vs:
+                for x in tqdm.tqdm(vs):
                     name = x.name
                     if name not in seen:
                         params = np.prod(x.shape.as_list())

@@ -220,9 +220,6 @@ def main(tpu_cluster=None):
             ckpt = tf.train.latest_checkpoint(args.restore_from)
         if ckpt:
             ckpt = os.path.join(BUCKET, ckpt)
-        if not args.fresh_model:
-            print('Loading checkpoint', ckpt)
-            saver.restore(sess, ckpt)
 
         print('Loading dataset...')
         chunks = load_dataset(enc, args.dataset, args.combine)
@@ -254,7 +251,7 @@ def main(tpu_cluster=None):
                 ctrs = np.array([[int(y) for y in re.findall(r'model-([0-9]+)(?:-[0-9]+)?[.]npy', x)] for x in glob(os.path.join(base, 'model-*.npy'))]).flatten()
                 if len(ctrs) <= 0:
                     return counter
-                ctr = ctrs.max()
+                ctr = ctrs.max(), False
             for out in sorted(glob(os.path.join(base, 'model-{}*.npy').format(ctr))):
                 print('Loading', out)
                 xs = np.load(out, allow_pickle=True)
@@ -265,11 +262,14 @@ def main(tpu_cluster=None):
                             print('Loading', k, v.shape)
                             x.load(v, session)
             print('Setting counter %d (was %d)' % (ctr + 1, counter))
-            return ctr + 1
+            return ctr + 1, True
 
         if not args.fresh_model:
             if tpu_cluster:
-                counter = load_tpu(session=sess)
+                counter, ok = load_tpu(session=sess)
+            if not ok:
+                print('Loading checkpoint', ckpt)
+                saver.restore(sess, ckpt)
 
         def save_tpu():
             maketree(os.path.join(CHECKPOINT_DIR, args.run_name))

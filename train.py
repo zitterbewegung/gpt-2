@@ -306,12 +306,12 @@ def main(tpu_cluster=None):
             while True:
                 out = os.path.join(CHECKPOINT_DIR, args.run_name, 'model-{}-{}.npy').format(counter, i)
                 fetched = False
+                ks = []
+                xs = []
                 vals = []
                 param_count = 0
                 for x in tqdm.tqdm(vs):
                     name = x.name
-                    ks = []
-                    xs = []
                     if name not in seen:
                         shape = x.shape.as_list()
                         params = np.prod(shape)
@@ -324,6 +324,7 @@ def main(tpu_cluster=None):
                         fetched = True
                         if param_count > 320000000:
                             break
+                if len(xs) > 0:
                     print('Fetching a batch of variables...')
                     values = sess.run(xs)
                     if args.float16:

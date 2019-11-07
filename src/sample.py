@@ -49,7 +49,7 @@ def sample_sequence(*, hparams, length, start_token=None, batch_size=None, conte
                 lm_output = model.model(hparams=hparams, X=tokens, past=past, reuse=tf.AUTO_REUSE)
             lm_output["logits"] = tf.cast(lm_output["logits"], tf.float32)
         else:
-            lm_output = lm_output = gpt2.model(params=params, X=tokens, past=past, reuse=tf.AUTO_REUSE)
+            lm_output = gpt2.model(hparams=hparams, X=tokens, past=past, reuse=tf.AUTO_REUSE)
 
         logits = lm_output['logits'][:, :, :hparams.n_vocab]
         presents = lm_output['present']

@@ -12,6 +12,7 @@ import tqdm
 from tensorflow.core.protobuf import rewriter_config_pb2
 from tensorflow.contrib import tpu
 from tensorflow.contrib.cluster_resolver import TPUClusterResolver
+from tensorflow.python import pywrap_tensorflow
 
 import model, sample, encoder
 from load_dataset import load_dataset, Sampler
@@ -239,8 +240,6 @@ def main(tpu_cluster=None):
                 os.path.join('models', args.model_name))
         else:
             ckpt = tf.train.latest_checkpoint(args.restore_from)
-        if ckpt:
-            ckpt = os.path.join(BUCKET, ckpt)
 
         print('Loading dataset...')
         chunks = load_dataset(enc, args.dataset, args.combine)
@@ -297,12 +296,43 @@ def main(tpu_cluster=None):
             print('Setting counter {} (was {})'.format(ctr + 1, counter))
             return ctr + 1, True
 
+        def load_snapshot(ckpt, session=None):
+            session = session or tf.get_default_session()
+            reader = pywrap_tensorflow.NewCheckpointReader('models/1558M')
+            m = reader.get_variable_to_shape_map()
+            seen = set()
+            vs = tf.trainable_variables()
+            while True:
+                fetched = False
+                param_count = 0
+                ops = []
+                for x in tqdm.tqdm(vs):
+                    name = x.name.split(':')[0]
+                    if name not in m:
+                        print('Warning: {} not in snapshot'.format(name))
+                    else:
+                        params = np.prod(m[name])
+                        param_count += params
+                        value = reader.get_tensor(name)
+                        ops += [tf.assign(x, value)]
+                        seen.add(name)
+                        fetched = True
+                        if param_count > 320000000:
+                            break
+                if not fetched:
+                    break
+                print('Uploading {} parameters in {} variables (out of {} total)...'.format(param_count, len(ops), len(vs)))
+                t0 = time.time()
+                session.run(ops)
+                t1 = time.time()
+                print('Uploaded in {} seconds'.format(t1 - t0))
+
         if not args.fresh_model:
             if tpu_cluster:
                 counter, ok = load_tpu(session=sess)
             if not ok:
                 print('Loading checkpoint', ckpt)
-                saver.restore(sess, ckpt)
+                load_snapshot(ckpt, session=sess)
 
         def save_tpu():
             maketree(os.path.join(CHECKPOINT_DIR, args.run_name))

@@ -250,8 +250,8 @@ def main(tpu_cluster=None):
             if ctr is None:
                 ctrs = np.array([[int(y) for y in re.findall(r'model-([0-9]+)(?:-[0-9]+)?[.]npy', x)] for x in glob(os.path.join(base, 'model-*.npy'))]).flatten()
                 if len(ctrs) <= 0:
-                    return counter
-                ctr = ctrs.max(), False
+                    return counter, False
+                ctr = ctrs.max()
             for out in sorted(glob(os.path.join(base, 'model-{}*.npy').format(ctr))):
                 print('Loading', out)
                 xs = np.load(out, allow_pickle=True)

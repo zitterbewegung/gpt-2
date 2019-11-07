@@ -257,10 +257,14 @@ def main(tpu_cluster=None):
                 xs = np.load(out, allow_pickle=True)
                 for k, v in tqdm.tqdm(xs):
                     vs = tf.trainable_variables()
+                    loaded = False
                     for x in vs:
                         if x.name == k:
                             print('Loading', k, v.shape)
                             x.load(v, session)
+                            loaded = True
+                    if not loaded:
+                        print('Warning: variable {} was not loaded'.format(k))
             print('Setting counter {} (was {})'.format(ctr + 1, counter))
             return ctr + 1, True
 

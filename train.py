@@ -318,8 +318,6 @@ def main(tpu_cluster=None):
                     x.load(value, session)
                     t1 = time.time()
                     print('Uploaded in {} seconds'.format(t1 - t0))
-                    seen.add(name)
-                    fetched = True
 
         if not args.fresh_model:
             ok = False

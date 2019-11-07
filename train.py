@@ -407,10 +407,11 @@ def main(tpu_cluster=None):
                         (opt_apply, loss, summaries),
                         feed_dict={context: batch})
 
+                if args.float16:
+                    v_loss = tf.to_float(v_loss).eval()
+
                 say('Adding summary...')
                 summary_log.add_summary(v_summary, counter)
-                import pdb
-                pdb.set_trace()
 
                 avg_loss = (avg_loss[0] * 0.99 + v_loss,
                             avg_loss[1] * 0.99 + 1.0)

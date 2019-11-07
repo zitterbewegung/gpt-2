@@ -409,8 +409,8 @@ def main(tpu_cluster=None):
         prev_time = time.time()
         avg_loss = (0.0, 0.0)
 
-        try:
-            while True:
+        while True:
+            try:
                 if counter % args.save_every == 0:
                     save()
                 if counter % args.sample_every == 0:
@@ -480,13 +480,15 @@ def main(tpu_cluster=None):
                         param_count += count
                     print('Total parameters:', param_count)
                     args.debug_print_trainable_vars = False
-        except KeyboardInterrupt:
-            print('interrupted')
-            if args.save_on_ctrlc:
-                save()
-            if args.debug_on_ctrlc:
-                import pdb
-                pdb.set_trace()
+            except KeyboardInterrupt:
+                print('interrupted')
+                if args.save_on_ctrlc:
+                    save()
+                if args.debug_on_ctrlc:
+                    import pdb
+                    pdb.set_trace()
+                else:
+                    break
         if tpu_cluster and args.init_tpu:
             print('Shutting down TPU system...')
             sess.run(tpu.shutdown_system())

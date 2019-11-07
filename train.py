@@ -288,9 +288,10 @@ def main(tpu_cluster=None):
             i = 0
             vs = tf.trainable_variables()
             seen = set()
+            out = os.path.join(CHECKPOINT_DIR, args.run_name, 'model-{}-?.npy').format(counter)
+            print('Generating', out)
             while True:
                 out = os.path.join(CHECKPOINT_DIR, args.run_name, 'model-{}-{}.npy').format(counter, i)
-                print('Saving', out)
                 fetched = False
                 vals = []
                 param_count = 0
@@ -307,6 +308,7 @@ def main(tpu_cluster=None):
                             break
                 if not fetched:
                     break
+                print('Saving', out)
                 np.save(out, vals)
                 i += 1
             print('Updating counter')

@@ -311,7 +311,9 @@ def main(tpu_cluster=None):
                     if name not in m:
                         print('Warning: {} not in snapshot'.format(name))
                     else:
+                        shape = m[name]
                         params = np.prod(m[name])
+                        print('Loading', name, shape, params, x.dtype)
                         param_count += params
                         value = reader.get_tensor(name)
                         ops += [tf.assign(x, value)]

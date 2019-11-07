@@ -291,7 +291,7 @@ def main(tpu_cluster=None):
                         vals += [[name, value]]
                         seen.add(name)
                         fetched = True
-                        if param_count > 500000:
+                        if param_count > 320000000:
                             break
                 if not fetched:
                     break

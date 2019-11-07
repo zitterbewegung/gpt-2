@@ -248,7 +248,7 @@ def main(tpu_cluster=None):
             if base is None:
                 base = os.path.join(CHECKPOINT_DIR, args.run_name)
             if ctr is None:
-                ctrs = np.array([[int(y) for y in re.findall(r'model-([0-9]+)(-[0-9]+)?[.]npy', x)] for x in glob(os.path.join(base, 'model-*.npy'))]).flatten()
+                ctrs = np.array([[int(y) for y in re.findall(r'model-([0-9]+)(?:-[0-9]+)?[.]npy', x)] for x in glob(os.path.join(base, 'model-*.npy'))]).flatten()
                 if len(ctrs) <= 0:
                     return counter
                 ctr = ctrs.max()

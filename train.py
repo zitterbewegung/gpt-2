@@ -455,7 +455,7 @@ def main(tpu_cluster=None):
 
                 counter += 1
 
-                if args.debug_print_all_variables:
+                if args.debug_print_all_vars:
                     print('all variables:')
                     print('name/shape/parameter_count')
                     param_count = 0
@@ -464,9 +464,9 @@ def main(tpu_cluster=None):
                         print(x.name, x.shape.to_list(), count)
                         param_count += count
                     print('Total parameters:', param_count)
-                    args.debug_print_all_variables = False
+                    args.debug_print_all_vars = False
 
-                if args.debug_print_trainable_variables:
+                if args.debug_print_trainable_vars:
                     print('trainable variables:')
                     print('name/shape/parameter_count')
                     param_count = 0
@@ -475,7 +475,7 @@ def main(tpu_cluster=None):
                         print(x.name, x.shape.to_list(), count)
                         param_count += count
                     print('Total parameters:', param_count)
-                    args.debug_print_trainable_variables = False
+                    args.debug_print_trainable_vars = False
         except KeyboardInterrupt:
             print('interrupted')
             if args.save_on_ctrlc:

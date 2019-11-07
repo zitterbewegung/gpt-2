@@ -313,7 +313,10 @@ def main(tpu_cluster=None):
                     if name not in seen:
                         params = np.prod(x.shape.as_list())
                         param_count += params
-                        value = x.eval()
+                        if args.float16:
+                            value = tf.to_float(x).eval()
+                        else:
+                            value = x.eval()
                         vals += [[name, value]]
                         seen.add(name)
                         fetched = True

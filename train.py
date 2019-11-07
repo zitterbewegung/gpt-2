@@ -60,6 +60,7 @@ parser.add_argument('--init_tpu', default=False, action='store_true', help='Init
 
 parser.add_argument('--fresh_model', default=False, action='store_true', help="Don't load model from disk; initialize model weights to random values")
 parser.add_argument('--save_on_ctrlc', default=False, action='store_true', help='When execution is interrupted, should we save the model to disk?')
+parser.add_argument('--float16', default=False, action='store_true', help='Use float16 weights?')
 
 # 1.5B
 #parser.add_argument('--n_ctx', type=int, default=1024, help='For a fresh model, how large should n_ctx be?')
@@ -100,6 +101,8 @@ def main(tpu_cluster=None):
     BUCKET = args.storage_bucket if tpu_cluster else ''
     enc = encoder.get_encoder(args.model_name)
     hparams = model.default_hparams()
+    if args.float16:
+      hparams.dtype = tf.bfloat16
     with open(os.path.join('models', args.model_name, 'hparams.json')) as f:
         hparams.override_from_dict(json.load(f))
     if args.fresh_model:

@@ -9,6 +9,7 @@ def default_hparams():
         n_embd=768,
         n_head=12,
         n_layer=12,
+        dtype=tf.float32
     )
 
 def shape_list(x):
@@ -25,12 +26,13 @@ def softmax(x, axis=-1):
 def gelu(x):
     return 0.5*x*(1+tf.tanh(np.sqrt(2/np.pi)*(x+0.044715*tf.pow(x, 3))))
 
-def norm(x, scope, *, axis=-1, epsilon=1e-5):
+def norm(x, scope, *, axis=-1, epsilon=1e-5, hparams=None):
     """Normalize to mean = 0, std = 1, then do a diagonal affine transform."""
     with tf.variable_scope(scope):
         n_state = x.shape[-1].value
-        g = tf.get_variable('g', [n_state], initializer=tf.constant_initializer(1))
-        b = tf.get_variable('b', [n_state], initializer=tf.constant_initializer(0))
+        dtype = hparams.dtype if hparams else tf.float32
+        g = tf.get_variable('g', [n_state], initializer=tf.constant_initializer(1), dtype=dtype)
+        b = tf.get_variable('b', [n_state], initializer=tf.constant_initializer(0), dtype=dtype)
         u = tf.reduce_mean(x, axis=axis, keepdims=True)
         s = tf.reduce_mean(tf.square(x-u), axis=axis, keepdims=True)
         x = (x - u) * tf.rsqrt(s + epsilon)
@@ -47,11 +49,12 @@ def merge_states(x):
     *start, a, b = shape_list(x)
     return tf.reshape(x, start + [a*b])
 
-def conv1d(x, scope, nf, *, w_init_stdev=0.02):
+def conv1d(x, scope, nf, *, w_init_stdev=0.02, hparams=None):
     with tf.variable_scope(scope):
         *start, nx = shape_list(x)
-        w = tf.get_variable('w', [1, nx, nf], initializer=tf.random_normal_initializer(stddev=w_init_stdev))
-        b = tf.get_variable('b', [nf], initializer=tf.constant_initializer(0))
+        dtype = hparams.dtype if hparams else tf.float32
+        w = tf.get_variable('w', [1, nx, nf], initializer=tf.random_normal_initializer(stddev=w_init_stdev), dtype=dtype)
+        b = tf.get_variable('b', [nf], initializer=tf.constant_initializer(0), dtype=dtype)
         c = tf.reshape(tf.matmul(tf.reshape(x, [-1, nx]), tf.reshape(w, [-1, nf]))+b, start+[nf])
         return c
 
@@ -99,7 +102,7 @@ def attn(x, scope, n_state, *, past, hparams):
         return a
 
     with tf.variable_scope(scope):
-        c = conv1d(x, 'c_attn', n_state*3)
+        c = conv1d(x, 'c_attn', n_state*3, hparams=hparams)
         q, k, v = map(split_heads, tf.split(c, 3, axis=2))
         present = tf.stack([k, v], axis=1)
         if past is not None:
@@ -108,24 +111,24 @@ def attn(x, scope, n_state, *, past, hparams):
             v = tf.concat([pv, v], axis=-2)
         a = multihead_attn(q, k, v)
         a = merge_heads(a)
-        a = conv1d(a, 'c_proj', n_state)
+        a = conv1d(a, 'c_proj', n_state, hparams=hparams)
         return a, present
 
 
 def mlp(x, scope, n_state, *, hparams):
     with tf.variable_scope(scope):
         nx = x.shape[-1].value
-        h = gelu(conv1d(x, 'c_fc', n_state))
-        h2 = conv1d(h, 'c_proj', nx)
+        h = gelu(conv1d(x, 'c_fc', n_state, hparams=hparams))
+        h2 = conv1d(h, 'c_proj', nx, hparams=hparams)
         return h2
 
 
 def block(x, scope, *, past, hparams):
     with tf.variable_scope(scope):
         nx = x.shape[-1].value
-        a, present = attn(norm(x, 'ln_1'), 'attn', nx, past=past, hparams=hparams)
+        a, present = attn(norm(x, 'ln_1', hparams=hparams), 'attn', nx, past=past, hparams=hparams)
         x = x + a
-        m = mlp(norm(x, 'ln_2'), 'mlp', nx*4, hparams=hparams)
+        m = mlp(norm(x, 'ln_2', hparams=hparams), 'mlp', nx*4, hparams=hparams)
         x = x + m
         return x, present
 
@@ -166,7 +169,7 @@ def model(hparams, X, past=None, scope='model', reuse=tf.AUTO_REUSE):
                 tf.add_to_collection('checkpoints', h)
             presents.append(present)
         results['present'] = tf.stack(presents, axis=1)
-        h = norm(h, 'ln_f')
+        h = norm(h, 'ln_f', hparams=hparams)
 
         # Language model loss.  Do tokens <n predict token n?
         h_flat = tf.reshape(h, [batch*sequence, hparams.n_embd])

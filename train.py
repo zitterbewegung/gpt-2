@@ -255,10 +255,10 @@ def main(tpu_cluster=None):
                 if len(ctrs) <= 0:
                     return counter
                 ctr = ctrs.max()
-            for out in glob(os.path.join(base, 'model-{}*.npy').format(ctr)):
+            for out in sorted(glob(os.path.join(base, 'model-{}*.npy').format(ctr))):
                 print('Loading', out)
                 xs = np.load(out, allow_pickle=True)
-                for k, v in xs:
+                for k, v in tqdm.tqdm(xs):
                     vs = tf.trainable_variables()
                     for x in vs:
                         if x.name == k:

@@ -281,7 +281,7 @@ def main(tpu_cluster=None):
                     loaded = False
                     for x in vs:
                         if x.name == k:
-                            print('Loading', k, v.shape)
+                            print('Loading', k, v.shape, x.dtype)
                             x.load(v, session)
                             loaded = True
                     if not loaded:
@@ -313,7 +313,8 @@ def main(tpu_cluster=None):
                     if name not in seen:
                         shape = x.shape.as_list()
                         params = np.prod(shape)
-                        print('Fetching', name, shape, params)
+                        dtype = x.dtype
+                        print('Fetching', name, shape, params, dtype)
                         param_count += params
                         if args.float16:
                             value = tf.to_float(x).eval()

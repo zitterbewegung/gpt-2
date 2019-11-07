@@ -276,16 +276,24 @@ def main(tpu_cluster=None):
             for out in sorted(glob(os.path.join(base, 'model-{}*.npy').format(ctr))):
                 print('Loading', out)
                 xs = np.load(out, allow_pickle=True)
+                ks = []
+                vs = []
                 for k, v in tqdm.tqdm(xs):
                     vs = tf.trainable_variables()
                     loaded = False
                     for x in vs:
                         if x.name == k:
                             print('Loading', k, v.shape, x.dtype)
-                            x.load(v, session)
+                            ks += [x]
+                            vs += [v]
                             loaded = True
                     if not loaded:
                         print('Warning: variable {} was not loaded'.format(k))
+                t0 = time.time()
+                ops = [tf.assign(k, v) for k, v in zip(ks, vs)]
+                session.run(ops)
+                t1 = time.time()
+                print('Loaded {} variables in {} seconds'.format(len(vs), t1 - t0))
             print('Setting counter {} (was {})'.format(ctr + 1, counter))
             return ctr + 1, True
 

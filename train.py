@@ -301,6 +301,8 @@ def main(tpu_cluster=None):
             reader = pywrap_tensorflow.NewCheckpointReader(ckpt)
             m = reader.get_variable_to_shape_map()
             vs = tf.trainable_variables()
+            param_count = 0
+            total_count = sum([np.prod(v) for k, v in m.items()])
             for x in tqdm.tqdm(vs):
                 name = x.name.split(':')[0]
                 if name not in m:
@@ -308,8 +310,8 @@ def main(tpu_cluster=None):
                 else:
                     shape = m[name]
                     params = np.prod(m[name])
-                    print('Loading from disk...', name, shape, params, x.dtype)
                     param_count += params
+                    print('Loading from disk ({} params out of {})...'.format(param_count, total_count), name, shape, params, x.dtype)
                     value = reader.get_tensor(name)
                     print('Uploading to device...', name, shape, params, x.dtype)
                     t0 = time.time()

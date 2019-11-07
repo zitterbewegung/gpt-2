@@ -153,6 +153,8 @@ def model(hparams, X, past=None, scope='model', reuse=tf.AUTO_REUSE):
         batch, sequence = shape_list(X)
 
         dtype = hparams.dtype if hparams else tf.float32
+        import pdb
+        pdb.set_trace()
         wpe = tf.get_variable('wpe', [hparams.n_ctx, hparams.n_embd],
                              initializer=tf.random_normal_initializer(stddev=0.01),
                              dtype=dtype)

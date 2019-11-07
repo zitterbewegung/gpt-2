@@ -460,8 +460,8 @@ def main(tpu_cluster=None):
                     print('name/shape/parameter_count')
                     param_count = 0
                     for x in tf.all_variables():
-                        count = np.prod(x.shape.to_list)
-                        print(x.name, x.shape.to_list(), count)
+                        count = np.prod(x.shape.tolist())
+                        print(x.name, x.shape.tolist(), count)
                         param_count += count
                     print('Total parameters:', param_count)
                     args.debug_print_all_vars = False
@@ -471,8 +471,8 @@ def main(tpu_cluster=None):
                     print('name/shape/parameter_count')
                     param_count = 0
                     for x in tf.trainable_variables():
-                        count = np.prod(x.shape.to_list)
-                        print(x.name, x.shape.to_list(), count)
+                        count = np.prod(x.shape.tolist())
+                        print(x.name, x.shape.tolist(), count)
                         param_count += count
                     print('Total parameters:', param_count)
                     args.debug_print_trainable_vars = False

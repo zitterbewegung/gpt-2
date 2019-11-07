@@ -298,7 +298,7 @@ def main(tpu_cluster=None):
 
         def load_snapshot(ckpt, session=None):
             session = session or tf.get_default_session()
-            reader = pywrap_tensorflow.NewCheckpointReader('models/1558M')
+            reader = pywrap_tensorflow.NewCheckpointReader(ckpt)
             m = reader.get_variable_to_shape_map()
             seen = set()
             vs = tf.trainable_variables()

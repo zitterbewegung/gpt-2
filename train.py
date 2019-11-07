@@ -60,6 +60,7 @@ parser.add_argument('--init_tpu', default=False, action='store_true', help='Init
 
 parser.add_argument('--fresh_model', default=False, action='store_true', help="Don't load model from disk; initialize model weights to random values")
 parser.add_argument('--save_on_ctrlc', default=False, action='store_true', help='When execution is interrupted, should we save the model to disk?')
+parser.add_argument('--debug_on_ctrlc', default=False, action='store_true', help='When execution is interrupted, attach a debugger (pdb.set_trace())')
 parser.add_argument('--float16', default=False, action='store_true', help='Use float16 weights?')
 
 # 1.5B
@@ -483,6 +484,9 @@ def main(tpu_cluster=None):
             print('interrupted')
             if args.save_on_ctrlc:
                 save()
+            if args.debug_on_ctrlc:
+                import pdb
+                pdb.set_trace()
         if tpu_cluster and args.init_tpu:
             print('Shutting down TPU system...')
             sess.run(tpu.shutdown_system())

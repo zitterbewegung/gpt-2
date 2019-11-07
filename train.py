@@ -261,7 +261,7 @@ def main(tpu_cluster=None):
                         if x.name == k:
                             print('Loading', k, v.shape)
                             x.load(v, session)
-            print('Setting counter %d (was %d)' % (ctr + 1, counter))
+            print('Setting counter {} (was {})'.format(ctr + 1, counter))
             return ctr + 1, True
 
         if not args.fresh_model:

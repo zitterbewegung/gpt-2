@@ -300,34 +300,24 @@ def main(tpu_cluster=None):
             session = session or tf.get_default_session()
             reader = pywrap_tensorflow.NewCheckpointReader(ckpt)
             m = reader.get_variable_to_shape_map()
-            seen = set()
             vs = tf.trainable_variables()
-            while True:
-                fetched = False
-                param_count = 0
-                ops = []
-                for x in tqdm.tqdm(vs):
-                    name = x.name.split(':')[0]
-                    if name not in m:
-                        print('Warning: {} not in snapshot'.format(name))
-                    else:
-                        shape = m[name]
-                        params = np.prod(m[name])
-                        print('Loading', name, shape, params, x.dtype)
-                        param_count += params
-                        value = reader.get_tensor(name)
-                        ops += [tf.assign(x, value)]
-                        seen.add(name)
-                        fetched = True
-                        if param_count > 320000000:
-                            break
-                if not fetched:
-                    break
-                print('Uploading {} parameters in {} variables (out of {} total)...'.format(param_count, len(ops), len(vs)))
-                t0 = time.time()
-                session.run(ops)
-                t1 = time.time()
-                print('Uploaded in {} seconds'.format(t1 - t0))
+            for x in tqdm.tqdm(vs):
+                name = x.name.split(':')[0]
+                if name not in m:
+                    print('Warning: {} not in snapshot'.format(name))
+                else:
+                    shape = m[name]
+                    params = np.prod(m[name])
+                    print('Loading from disk...', name, shape, params, x.dtype)
+                    param_count += params
+                    value = reader.get_tensor(name)
+                    print('Uploading to device...', name, shape, params, x.dtype)
+                    t0 = time.time()
+                    x.load(value, session)
+                    t1 = time.time()
+                    print('Uploaded in {} seconds'.format(t1 - t0))
+                    seen.add(name)
+                    fetched = True
 
         if not args.fresh_model:
             ok = False

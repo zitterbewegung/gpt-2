@@ -90,6 +90,9 @@ parser.add_argument('--n_layer', type=int, default=-1, help='For a fresh model, 
 parser.add_argument('--debug_print_all_vars', default=False, action='store_true', help="Print all variables after running one training step")
 parser.add_argument('--debug_print_trainable_vars', default=False, action='store_true', help="Print trainable variables after running one training step")
 
+parser.add_argument('--allow_growth', default=False, action='store_true', help="Set config.gpu_options.allow_growth = True")
+parser.add_argument('--disable_layout_optimizer', default=False, action='store_true', help="Set config.graph_options.rewrite_options.layout_optimizer = rewriter_config_pb2.RewriterConfig.OFF")
+
 def maketree(path):
     try:
         os.makedirs(path)
@@ -136,8 +139,10 @@ def main(tpu_cluster=None):
             args.only_train_transformer_layers = True
 
     config = tf.ConfigProto()
-    config.gpu_options.allow_growth = True
-    config.graph_options.rewrite_options.layout_optimizer = rewriter_config_pb2.RewriterConfig.OFF
+    if args.allow_growth:
+        config.gpu_options.allow_growth = True
+    if args.disable_layout_optimizer:
+        config.graph_options.rewrite_options.layout_optimizer = rewriter_config_pb2.RewriterConfig.OFF
     with tf.Session(tpu_cluster, config=config) as sess:
         if tpu_cluster and args.init_tpu:
             print("initializing TPU system...")

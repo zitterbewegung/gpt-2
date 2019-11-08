@@ -319,7 +319,7 @@ def main(tpu_cluster=None):
             params2 = np.prod(value.shape)
             if params == params2:
                 return value
-            print('Truncating {} from shape {} to shape {}'.format(variable.name, shape, value.shape))
+            print('Truncating {} from shape {} to shape {}'.format(variable.name, value.shape, shape))
             value = value.reshape([-1])
             value = value[0:params]
             value = value.reshape(shape)

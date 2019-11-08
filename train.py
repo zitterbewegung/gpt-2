@@ -96,6 +96,8 @@ parser.add_argument('--debug_print_trainable_vars', default=False, action='store
 parser.add_argument('--allow_growth', default=False, action='store_true', help="Set config.gpu_options.allow_growth = True")
 parser.add_argument('--disable_layout_optimizer', default=False, action='store_true', help="Set config.graph_options.rewrite_options.layout_optimizer = rewriter_config_pb2.RewriterConfig.OFF")
 
+parser.add_argument('--debug_before_training', default=False, action='store_true', help="Drop into debugger before starting the training loop")
+
 def maketree(path):
     try:
         os.makedirs(path)
@@ -487,6 +489,10 @@ def main(tpu_cluster=None):
 
         prev_time = time.time()
         avg_loss = (0.0, 0.0)
+
+        if args.debug_before_training:
+            import pdb
+            pdb.set_trace()
 
         while True:
             try:

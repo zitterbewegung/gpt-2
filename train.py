@@ -124,15 +124,15 @@ def main(tpu_cluster=None):
         hparams.dtype = tf.float32
     elif args.dtype == 'float16':
         hparams.dtype = tf.float16
-        epsilon = -10000
+        epsilon = -65500
     elif args.dtype == 'bfloat16':
         hparams.dtype = tf.bfloat16
-        epsilon = -10000
+        epsilon = -65500
     else:
         print('Unknown dtype', args.dtype)
     if args.float16:
         hparams.dtype = tf.bfloat16
-        epsilon = -10000
+        epsilon = -65500
 
     with open(os.path.join('models', args.model_name, 'hparams.json')) as f:
         hparams.override_from_dict(json.load(f))

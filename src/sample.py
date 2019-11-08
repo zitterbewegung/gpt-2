@@ -2,7 +2,7 @@ import tensorflow as tf
 
 import model
 
-def top_k_logits(logits, k):
+def top_k_logits(logits, k, epsilon=-1e10):
     if k == 0:
         # no truncation
         return logits
@@ -12,7 +12,7 @@ def top_k_logits(logits, k):
         min_values = values[:, -1, tf.newaxis]
         return tf.where(
             logits < min_values,
-            tf.ones_like(logits, dtype=logits.dtype) * -1e10,
+            tf.ones_like(logits, dtype=logits.dtype) * epsilon,
             logits,
         )
     return tf.cond(
@@ -22,7 +22,7 @@ def top_k_logits(logits, k):
     )
 
 
-def top_p_logits(logits, p):
+def top_p_logits(logits, p, epsilon=-1e10):
     with tf.variable_scope('top_p_logits'):
         logits_sort = tf.sort(logits, direction='DESCENDING')
         probs_sort = tf.nn.softmax(logits_sort)
@@ -31,12 +31,12 @@ def top_p_logits(logits, p):
         min_logits = tf.reduce_min(logits_masked, axis=1, keepdims=True) # [batchsize, 1]
         return tf.where(
             logits < min_logits,
-            tf.ones_like(logits, dtype=logits.dtype) * -1e10,
+            tf.ones_like(logits, dtype=logits.dtype) * epsilon,
             logits,
         )
 
 
-def sample_sequence(*, hparams, length, start_token=None, batch_size=None, context=None, temperature=1, top_k=0, top_p=0.0):
+def sample_sequence(*, hparams, length, start_token=None, batch_size=None, context=None, temperature=1, top_k=0, top_p=0.0, epsilon=-1e10):
     if start_token is None:
         assert context is not None, 'Specify exactly one of start_token and context!'
     else:
@@ -66,9 +66,9 @@ def sample_sequence(*, hparams, length, start_token=None, batch_size=None, conte
             next_outputs = step(hparams, prev[:, tf.newaxis], past=past)
             logits = next_outputs['logits'][:, -1, :]  / tf.to_float(temperature)
             if top_p > 0.0:
-                logits = top_p_logits(logits, p=top_p)
+                logits = top_p_logits(logits, p=top_p, epsilon=epsilon)
             else:
-                logits = top_k_logits(logits, k=top_k)
+                logits = top_k_logits(logits, k=top_k, epsilon=epsilon)
             samples = tf.multinomial(logits, num_samples=1, output_dtype=tf.int32)
             return [
                 tf.concat([past, next_outputs['presents']], axis=-2),

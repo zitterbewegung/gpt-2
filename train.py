@@ -117,16 +117,20 @@ def main(tpu_cluster=None):
     BUCKET = args.storage_bucket if tpu_cluster else ''
     enc = encoder.get_encoder(args.model_name)
     hparams = model.default_hparams()
+    epsilon = -1e10
     if args.dtype == 'float32':
         hparams.dtype = tf.float32
     elif args.dtype == 'float16':
         hparams.dtype = tf.float16
+        epsilon = -10000
     elif args.dtype == 'bfloat16':
         hparams.dtype = tf.bfloat16
+        epsilon = -10000
     else:
         print('Unknown dtype', args.dtype)
     if args.float16:
         hparams.dtype = tf.bfloat16
+        epsilon = -10000
 
     with open(os.path.join('models', args.model_name, 'hparams.json')) as f:
         hparams.override_from_dict(json.load(f))
@@ -184,7 +188,8 @@ def main(tpu_cluster=None):
             batch_size=args.batch_size,
             temperature=1.0,
             top_k=args.top_k,
-            top_p=args.top_p)
+            top_p=args.top_p,
+            epsilon=epsilon)
 
         all_vars = [v for v in tf.trainable_variables() if 'model' in v.name]
         train_vars = [v for v in all_vars if '/h' in v.name] if args.only_train_transformer_layers else all_vars

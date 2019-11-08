@@ -88,6 +88,8 @@ parser.add_argument('--n_embd', type=int, default=-1, help='For a fresh model, h
 parser.add_argument('--n_head', type=int, default=-1, help='For a fresh model, how large should n_head be?')
 parser.add_argument('--n_layer', type=int, default=-1, help='For a fresh model, how large should n_layer be?')
 
+parser.add_argument('--truncate_weights', default=False, action='store_true', help="Try loading variables from snapshots, even if those variables' shapes do not match")
+
 parser.add_argument('--debug_print_all_vars', default=False, action='store_true', help="Print all variables after running one training step")
 parser.add_argument('--debug_print_trainable_vars', default=False, action='store_true', help="Print trainable variables after running one training step")
 
@@ -311,6 +313,18 @@ def main(tpu_cluster=None):
             print('Setting counter {} (was {})'.format(ctr + 1, counter))
             return ctr + 1, True
 
+        def truncate_value(variable, value):
+            shape = variable.shape.aslist()
+            params = np.prod(shape)
+            params2 = np.prod(value.shape)
+            if params == params2:
+                return value
+            print('Truncating {} from shape {} to shape {}'.format(variable.name, shape, value.shape))
+            value = value.reshape([-1])
+            value = value[0:params]
+            value = value.reshape(shape)
+            return value
+
         def load_snapshot(ckpt, session=None):
             session = session or tf.get_default_session()
             reader = pywrap_tensorflow.NewCheckpointReader(ckpt)
@@ -327,9 +341,12 @@ def main(tpu_cluster=None):
                     params = np.prod(m[name])
                     param_count += params
                     print('Loading from disk ({} params out of {})...'.format(param_count, total_count), name, shape, params, x.dtype)
+                    if args.truncate_weights:
+                        value = truncate_value(x, value)
                     value = reader.get_tensor(name)
                     print('Uploading to device...', name, shape, params, x.dtype)
                     t0 = time.time()
+                    
                     x.load(value, session)
                     t1 = time.time()
                     print('Uploaded in {} seconds'.format(t1 - t0))

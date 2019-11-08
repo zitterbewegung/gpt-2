@@ -341,12 +341,11 @@ def main(tpu_cluster=None):
                     params = np.prod(m[name])
                     param_count += params
                     print('Loading from disk ({} params out of {})...'.format(param_count, total_count), name, shape, params, x.dtype)
+                    value = reader.get_tensor(name)
                     if args.truncate_weights:
                         value = truncate_value(x, value)
-                    value = reader.get_tensor(name)
                     print('Uploading to device...', name, shape, params, x.dtype)
                     t0 = time.time()
-                    
                     x.load(value, session)
                     t1 = time.time()
                     print('Uploaded in {} seconds'.format(t1 - t0))

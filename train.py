@@ -314,7 +314,7 @@ def main(tpu_cluster=None):
             return ctr + 1, True
 
         def truncate_value(variable, value):
-            shape = variable.shape.aslist()
+            shape = variable.shape.as_list()
             params = np.prod(shape)
             params2 = np.prod(value.shape)
             if params == params2:

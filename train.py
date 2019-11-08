@@ -63,6 +63,7 @@ parser.add_argument('--fresh_model', default=False, action='store_true', help="D
 parser.add_argument('--save_on_ctrlc', default=False, action='store_true', help='When execution is interrupted, should we save the model to disk?')
 parser.add_argument('--debug_on_ctrlc', default=False, action='store_true', help='When execution is interrupted, attach a debugger (pdb.set_trace())')
 parser.add_argument('--float16', default=False, action='store_true', help='Use float16 weights?')
+parser.add_argument('--dtype', type=str, default='float32', help='dtype. <float32|float16|bfloat16>.')
 
 # 1.5B
 #parser.add_argument('--n_ctx', type=int, default=1024, help='For a fresh model, how large should n_ctx be?')
@@ -114,8 +115,17 @@ def main(tpu_cluster=None):
     BUCKET = args.storage_bucket if tpu_cluster else ''
     enc = encoder.get_encoder(args.model_name)
     hparams = model.default_hparams()
+    if args.dtype == 'float32':
+        hparams.dtype = tf.float32
+    elif args.dtype == 'float16':
+        hparams.dtype = tf.float16
+    elif args.dtype == 'bfloat16':
+        hparams.dtype = tf.bfloat16
+    else:
+        print('Unknown dtype', args.dtype)
     if args.float16:
-      hparams.dtype = tf.bfloat16
+        hparams.dtype = tf.bfloat16
+
     with open(os.path.join('models', args.model_name, 'hparams.json')) as f:
         hparams.override_from_dict(json.load(f))
     if args.n_ctx >= 0:
